@@ -1,4 +1,4 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { WorkOrderService } from '../../services/work-order.service';
 import { ZoomLevelService } from '../../services/zoom-level.service';
 import { TimelineComponent } from '../timeline/timeline.component';
@@ -13,7 +13,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
   template: `
     <div class="work-order-schedule">
       <app-timeline
-        [workCenters]="workCenters()"
+        [workCenters]="displayedWorkCenters()"
         [workOrders]="workOrders()"
         [zoomLevel]="zoomService.level()"
         (createRequest)="onCreateRequest($event)"
@@ -44,6 +44,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
 export class WorkOrderScheduleComponent {
   zoomService = inject(ZoomLevelService);
   workCenters = signal<WorkCenterDocument[]>([]);
+  displayedWorkCenters = computed(() => this.workCenters().slice(0, 6));
   workOrders = signal<WorkOrderDocument[]>([]);
   panelVisible = signal(false);
   panelMode = signal<'create' | 'edit'>('create');

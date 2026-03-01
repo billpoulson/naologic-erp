@@ -17,8 +17,8 @@ export const FALLBACK_WORK_ORDERS: WorkOrderDocument[] = [
       name: 'Batch A',
       workCenterId: 'wc-1',
       status: 'complete',
-      startDate: '2026-02-01',
-      endDate: '2026-02-07',
+      startDate: '2026-01-06',
+      endDate: '2026-02-28',
     },
   },
   {
@@ -28,8 +28,8 @@ export const FALLBACK_WORK_ORDERS: WorkOrderDocument[] = [
       name: 'Batch B',
       workCenterId: 'wc-1',
       status: 'in-progress',
-      startDate: '2026-02-15',
-      endDate: '2026-02-22',
+      startDate: '2026-03-02',
+      endDate: '2026-04-24',
     },
   },
 ];

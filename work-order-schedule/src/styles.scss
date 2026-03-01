@@ -1,0 +1,15 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import 'styles/variables';
+
+/* Importing Bootstrap SCSS file. */
+@import 'bootstrap/scss/bootstrap';
+
+* {
+  font-family: 'Circular-Std', sans-serif;
+}
+
+body {
+  background-color: $color-bg-primary;
+  color: $color-text-primary;
+}

@@ -1,0 +1,62 @@
+// Work Order Schedule - Design tokens from UI-THEME-DESIGN-DOCUMENT.md and theme-colors.json
+
+// Backgrounds
+$color-bg-primary: #FFFFFF;
+$color-bg-secondary: #F9F9FB;
+$color-bg-secondary-alt: #F8F8F8;
+$color-bg-hover: #E8E8FF;
+$color-bg-hover-alt: #E0E7F5;
+$color-bg-canvas: #282a2e;
+
+// Text
+$color-text-primary: #333333;
+$color-text-primary-alt: #000000;
+$color-text-secondary: #888888;
+$color-text-secondary-alt: #AAAAAA;
+$color-text-interactive: #1890FF;
+$color-text-interactive-alt: #4F46E5;
+
+// Accent
+$color-accent-primary: #5C6BC0;
+$color-accent-primary-alt: #4F46E5;
+$color-accent-logo: #5C6BC0;
+
+// Status
+$color-status-open: #1890FF;
+$color-status-open-bg: #E6F7FF;
+$color-status-in-progress: #A78BFA;
+$color-status-in-progress-bg: #E0D9FA;
+$color-status-blocked: #FACC15;
+$color-status-blocked-bg: #FFECB3;
+$color-status-complete: #4CAF50;
+$color-status-complete-bg: #C8E6C9;
+$color-status-current-month: #52C4B7;
+$color-status-current-month-bg: #AECBFA;
+
+// Borders
+$color-border: #E0E0E0;
+$color-border-light: #EEEEEE;
+$color-border-focus: #5C6BC0;
+
+// Layout
+$layout-width-max: 1440px;
+$layout-panel-width: 400px;
+$layout-work-center-width: 200px;
+$radius-default: 4px;
+
+// Spacing (8px grid, matches Sketch/timeline)
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 24px;
+
+// Panel (from Sketch design)
+$panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+$panel-overlay: rgba(0, 0, 0, 0.3);
+
+// Dropdown (from Sketch design)
+$dropdown-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+$radius-dropdown: 5px;
+$dropdown-text-color: rgba(62, 64, 219, 1);
+$dropdown-font-family: 'Circular-Std', sans-serif;

@@ -1,0 +1,49 @@
+@use '../styles/variables' as *;
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  margin: 20px 0 0 101px;
+}
+
+.app-header {
+  padding: 0;
+  border-bottom: 1px solid $color-border;
+  background: $color-bg-primary;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.app-logo {
+  width: 80px;
+  height: 10px;
+  display: block;
+}
+
+.app-logo path {
+  fill: rgba(62, 64, 219, 1);
+}
+
+.app-title {
+  margin: 65px 0 0 0;
+  width: 142px;
+  height: 34px;
+  color: rgba(3, 9, 41, 1);
+  font-family: 'CircularStd-Medium', 'Circular-Std', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.app-timescale {
+  margin-top: $spacing-md;
+}
+
+
+.app-main {
+  flex: 1;
+  overflow: hidden;
+  display: none; /* Hidden while focusing on logo, header, timescale */
+}

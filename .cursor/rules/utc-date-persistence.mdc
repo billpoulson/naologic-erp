@@ -1,0 +1,14 @@
+---
+description: UTC date persistence and client timezone (ADR-005)
+alwaysApply: true
+---
+
+# UTC Date Persistence
+
+Follow [ADR-005](docs/adr/005-utc-date-persistence.md):
+
+- **Persist in UTC** – Store all dates in UTC (ISO 8601 with `Z` or equivalent)
+- **Transform at runtime** – Convert UTC → client timezone only at display (UI layer)
+- **APIs** – Accept and return dates in UTC (e.g. `2025-03-01T14:30:00Z`)
+- **Display** – Use platform APIs (`Intl`, `Date`, Angular `DatePipe` with timezone) to show local time
+- **Input** – Convert user input (local time) to UTC before persistence

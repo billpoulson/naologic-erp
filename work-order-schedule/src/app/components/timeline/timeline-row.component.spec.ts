@@ -221,5 +221,67 @@ describe('TimelineRowComponent', () => {
 
       expect(left).toBe(0);
     });
+
+    it('should clamp bar and set continuesLeft when work order starts before range', () => {
+      const rangeStart = new Date(2025, 1, 1); // Feb 1
+      const rangeEnd = new Date(2025, 2, 1); // Mar 1
+      const timelineWidth = 600;
+
+      fixture.componentRef.setInput('rangeStart', rangeStart);
+      fixture.componentRef.setInput('rangeEnd', rangeEnd);
+      fixture.componentRef.setInput('timelineWidth', timelineWidth);
+
+      const orders = [createWorkOrder({ startDate: '2025-01-01', endDate: '2025-02-15' })];
+      fixture.componentRef.setInput('workOrders', orders);
+      fixture.detectChanges();
+
+      const barHost = fixture.nativeElement.querySelector('app-work-order-bar');
+      const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
+      expect(bar?.classList.contains('continues-left')).toBe(true);
+      expect(bar?.classList.contains('continues-right')).toBe(false);
+      const left = parseInt(bar.style.left || '0', 10);
+      expect(left).toBe(0);
+    });
+
+    it('should clamp bar and set continuesRight when work order ends after range', () => {
+      const rangeStart = new Date(2025, 1, 1); // Feb 1
+      const rangeEnd = new Date(2025, 2, 1); // Mar 1
+      const timelineWidth = 600;
+
+      fixture.componentRef.setInput('rangeStart', rangeStart);
+      fixture.componentRef.setInput('rangeEnd', rangeEnd);
+      fixture.componentRef.setInput('timelineWidth', timelineWidth);
+
+      const orders = [createWorkOrder({ startDate: '2025-02-15', endDate: '2025-04-01' })];
+      fixture.componentRef.setInput('workOrders', orders);
+      fixture.detectChanges();
+
+      const barHost = fixture.nativeElement.querySelector('app-work-order-bar');
+      const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
+      expect(bar?.classList.contains('continues-left')).toBe(false);
+      expect(bar?.classList.contains('continues-right')).toBe(true);
+      const left = parseInt(bar.style.left || '0', 10);
+      const width = parseInt(bar.style.width || '0', 10);
+      expect(left + width).toBe(timelineWidth);
+    });
+
+    it('should set both continuesLeft and continuesRight when work order spans full range', () => {
+      const rangeStart = new Date(2025, 1, 1); // Feb 1
+      const rangeEnd = new Date(2025, 2, 1); // Mar 1
+      const timelineWidth = 600;
+
+      fixture.componentRef.setInput('rangeStart', rangeStart);
+      fixture.componentRef.setInput('rangeEnd', rangeEnd);
+      fixture.componentRef.setInput('timelineWidth', timelineWidth);
+
+      const orders = [createWorkOrder({ startDate: '2024-06-01', endDate: '2025-06-01' })];
+      fixture.componentRef.setInput('workOrders', orders);
+      fixture.detectChanges();
+
+      const barHost = fixture.nativeElement.querySelector('app-work-order-bar');
+      const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
+      expect(bar?.classList.contains('continues-left')).toBe(true);
+      expect(bar?.classList.contains('continues-right')).toBe(true);
+    });
   });
 });

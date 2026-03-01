@@ -54,6 +54,20 @@ describe('WorkOrderBarComponent', () => {
     expect(bar?.classList.contains('status-complete')).toBe(true);
   });
 
+  it('should apply continues-left class when continuesLeft is true', () => {
+    fixture.componentRef.setInput('continuesLeft', true);
+    fixture.detectChanges();
+    const bar = fixture.nativeElement.querySelector('.work-order-bar');
+    expect(bar?.classList.contains('continues-left')).toBe(true);
+  });
+
+  it('should apply continues-right class when continuesRight is true', () => {
+    fixture.componentRef.setInput('continuesRight', true);
+    fixture.detectChanges();
+    const bar = fixture.nativeElement.querySelector('.work-order-bar');
+    expect(bar?.classList.contains('continues-right')).toBe(true);
+  });
+
   describe('formatStatus', () => {
     it('should format in-progress as "In Progress"', () => {
       expect(component.formatStatus('in-progress')).toBe('In Progress');

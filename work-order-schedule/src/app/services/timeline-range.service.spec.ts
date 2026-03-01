@@ -65,16 +65,17 @@ describe('TimelineRangeService', () => {
       expect(afterEnd).toBeGreaterThan(beforeEnd);
     });
 
-    it('should extend to minEndDate when work orders extend beyond chunk', () => {
+    it('should extend by chunk only (no minEndDate jump)', () => {
       service.initialize('month');
       const before = service.dateRange()!;
-      const farFuture = new Date(before.end);
-      farFuture.setMonth(farFuture.getMonth() + 6);
+      const beforeEnd = before.end.getTime();
+      const chunkMs = 30 * 24 * 60 * 60 * 1000; // ~1 month in ms
 
-      service.extendForward('month', farFuture);
+      service.extendForward('month');
       const after = service.dateRange()!;
 
-      expect(after.end.getTime()).toBe(farFuture.getTime());
+      expect(after.end.getTime()).toBeGreaterThan(beforeEnd);
+      expect(after.end.getTime()).toBeLessThanOrEqual(beforeEnd + chunkMs + 86400000);
     });
   });
 

@@ -1,6 +1,7 @@
 @use '../styles/variables' as *;
 
 .app-shell {
+  height: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -9,7 +10,6 @@
 
 .app-header {
   padding: 0;
-  border-bottom: 1px solid $color-border;
   background: $color-bg-primary;
   display: flex;
   flex-direction: column;
@@ -27,23 +27,12 @@
   fill: rgba(62, 64, 219, 1);
 }
 
-.app-title {
-  margin: 65px 0 0 0;
-  width: 142px;
-  height: 34px;
-  color: rgba(3, 9, 41, 1);
-  font-family: 'CircularStd-Medium', 'Circular-Std', sans-serif;
-  font-size: 24px;
-  font-weight: 500;
+.app-timeline-heading {
+  margin-top: 65px;
 }
-
-.app-timescale {
-  margin-top: $spacing-md;
-}
-
 
 .app-main {
   flex: 1;
   overflow: hidden;
-  display: none; /* Hidden while focusing on logo, header, timescale */
+  margin-top: 24px;
 }

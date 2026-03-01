@@ -9,6 +9,17 @@
   font-family: 'Circular-Std', sans-serif;
 }
 
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+app-root {
+  display: block;
+  height: 100%;
+}
+
 body {
   background-color: $color-bg-primary;
   color: $color-text-primary;

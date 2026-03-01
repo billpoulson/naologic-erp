@@ -1,0 +1,14 @@
+{
+  "element": {
+    "color": "rgb(0, 0, 238)",
+    "backgroundColor": "rgba(0, 0, 0, 0)"
+  },
+  "svg": {
+    "fill": "rgb(62, 64, 219)",
+    "fillHex": "#3E40DB"
+  },
+  "dimensions": {
+    "width": 114,
+    "height": 15
+  }
+}

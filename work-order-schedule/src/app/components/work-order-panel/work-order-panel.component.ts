@@ -204,8 +204,14 @@ function ngbToDate(ngb: NgbDateStruct): Date {
       }
 
       .status-pill-open {
-        background: $color-status-open-bg;
-        color: $color-status-open;
+        border: 1px solid rgba(206, 251, 255, 1);
+        border-radius: 5px;
+        background-color: rgba(228, 253, 255, 1);
+        color: rgba(0, 176, 191, 1);
+        font-family: CircularStd-Regular;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
       }
 
       .status-pill-in-progress {

@@ -8,7 +8,7 @@ export interface DateRange {
 }
 
 /** Years of range to pre-populate on each side of the current date (configurable) */
-export const TIMELINE_RANGE_YEARS = 5;
+export const TIMELINE_RANGE_YEARS = 10;
 
 /** Default window sizes (time units) when viewport is unknown - fills ~2-3 viewport widths */
 export const DEFAULT_WINDOW_UNITS: Record<ZoomLevel, number> = {

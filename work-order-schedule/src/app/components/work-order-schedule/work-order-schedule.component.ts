@@ -28,7 +28,6 @@ import type { WorkOrderDocument } from '../../models/work-order';
         [workCenterId]="clickContext()?.workCenterId ?? null"
         (close)="onPanelClose()"
         (save)="onPanelSave($event)"
-        (delete)="onPanelDelete()"
       />
     </div>
   `,
@@ -89,14 +88,6 @@ export class WorkOrderScheduleComponent {
         this.workOrderService.updateWorkOrder(wo.docId, data);
       }
     }
-    this.onPanelClose();
-  }
-
-  onPanelDelete(): void {
-    const wo = this.selectedWorkOrder();
-    if (wo) {
-      this.workOrderService.deleteWorkOrder(wo.docId);
-    }
-    this.onPanelClose();
+    // Panel closes via requestClose() animation; don't call onPanelClose here
   }
 }

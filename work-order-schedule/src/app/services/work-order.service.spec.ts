@@ -147,6 +147,27 @@ describe('WorkOrderService', () => {
     });
   });
 
+  it('should persist work orders to localStorage on update', (done) => {
+    flushInitialData();
+    service.workOrders.pipe(take(1)).subscribe((orders) => {
+      const docId = orders[0].docId;
+      service.updateWorkOrder(docId, {
+        name: 'Updated Name',
+        status: 'complete',
+        startDate: '2025-06-02',
+        endDate: '2025-06-12',
+      });
+      const stored = localStorage.getItem(STORAGE_KEY);
+      expect(stored).toBeTruthy();
+      const parsed = JSON.parse(stored!);
+      const updated = parsed.find((o: { docId: string }) => o.docId === docId);
+      expect(updated).toBeTruthy();
+      expect(updated.data.name).toBe('Updated Name');
+      expect(updated.data.status).toBe('complete');
+      done();
+    });
+  });
+
   describe('when localStorage has work orders', () => {
     beforeEach(() => {
       if (typeof localStorage !== 'undefined') {

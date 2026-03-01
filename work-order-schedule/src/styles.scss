@@ -28,6 +28,7 @@ $circular-std-url: 'https://naologic-com-assets.naologic.com/fonts/circular-std'
 }
 
 @import 'styles/variables';
+@import '@ng-select/ng-select/scss/default.theme';
 
 /* Importing Bootstrap SCSS file. */
 @import 'bootstrap/scss/bootstrap';

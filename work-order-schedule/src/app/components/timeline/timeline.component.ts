@@ -11,6 +11,7 @@ import {
   ElementRef,
   AfterViewInit,
   OnDestroy,
+  NgZone,
 } from '@angular/core';
 import { TimelineCalculatorService, type ZoomLevel } from '../../services/timeline-calculator.service';
 import { TimelineRangeService } from '../../services/timeline-range.service';
@@ -105,6 +106,7 @@ const DRAG_THRESHOLD_PX = 5;
                 [rangeStart]="dateRange().start"
                 [rangeEnd]="dateRange().end"
                 [timelineWidth]="timelineWidth()"
+                [scrollState]="scrollState()"
                 [zoomLevel]="zoomLevel()"
                 (createRequest)="createRequest.emit($event)"
                 (editRequest)="editRequest.emit($event)"
@@ -140,6 +142,8 @@ const DRAG_THRESHOLD_PX = 5;
       .timeline-left {
         width: 380px;
         flex-shrink: 0;
+        position: relative;
+        z-index: 1;
         display: flex;
         flex-direction: column;
       }
@@ -249,6 +253,9 @@ const DRAG_THRESHOLD_PX = 5;
 
       .timeline-right {
         flex: 1;
+        min-width: 0;
+        position: relative;
+        z-index: 2;
         overflow-x: auto;
         overflow-y: auto;
         background-color: rgba(247, 249, 252, 1);
@@ -353,6 +360,11 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   @ViewChild('timelineScroll') scrollContainerRef?: ElementRef<HTMLElement>;
 
   protected hoveredWorkCenterId = signal<string | null>(null);
+  /** Scroll state for off-screen bar detection: { scrollLeft, viewportWidth } */
+  scrollState = signal<{ scrollLeft: number; viewportWidth: number }>({
+    scrollLeft: 0,
+    viewportWidth: 0,
+  });
   private extendingBackward = false;
   private extendingForward = false;
   private dragStartX: number | null = null;
@@ -362,6 +374,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   private initialScrollSet = false;
 
   private readonly panService = inject(TimelinePanService);
+
+  private readonly zone = inject(NgZone);
 
   constructor(
     private calculator: TimelineCalculatorService,
@@ -390,6 +404,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       setTimeout(() => this.scrollToShowNow(), 0);
     }
     this.observeViewportResize();
+    // Delayed re-check: layout may not be ready on first paint (fonts, tab visibility, etc.)
+    setTimeout(() => this.updateViewportAndRange(), 100);
   }
 
   private hasInitializedWithViewport = false;
@@ -398,6 +414,10 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const scrollEl = this.scrollContainerRef?.nativeElement;
     if (!scrollEl) return;
     const viewportWidth = scrollEl.clientWidth;
+    this.scrollState.set({
+      scrollLeft: scrollEl.scrollLeft,
+      viewportWidth,
+    });
     if (viewportWidth > 0) {
       this.rangeService.setViewportWidth(viewportWidth);
       if (!this.hasInitializedWithViewport) {
@@ -410,7 +430,9 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   private observeViewportResize(): void {
     const scrollEl = this.scrollContainerRef?.nativeElement;
     if (!scrollEl || typeof ResizeObserver === 'undefined') return;
-    this.resizeObserver = new ResizeObserver(() => this.updateViewportAndRange());
+    this.resizeObserver = new ResizeObserver(() =>
+      this.zone.run(() => this.updateViewportAndRange())
+    );
     this.resizeObserver.observe(scrollEl);
   }
 
@@ -496,8 +518,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       this.isDragging = true;
       this.panService.setPanningOccurred();
     }
-    if (this.isDragging) {
+    if (this.isDragging && this.scrollContainer) {
       this.scrollContainer.scrollLeft = (this.dragStartScrollLeft ?? 0) - dx;
+      this.scrollState.set({
+        scrollLeft: this.scrollContainer.scrollLeft,
+        viewportWidth: this.scrollContainer.clientWidth,
+      });
       this.checkExtendAtEdges(this.scrollContainer, event);
     }
   }
@@ -512,7 +538,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
   onScroll(event: Event): void {
     const el = event.target as HTMLElement;
-    if (!el || this.extendingBackward || this.extendingForward) return;
+    if (!el) return;
+    this.scrollState.set({
+      scrollLeft: el.scrollLeft,
+      viewportWidth: el.clientWidth,
+    });
+    if (this.extendingBackward || this.extendingForward) return;
     if (this.dragStartX !== null) return;
 
     this.checkExtendAtEdges(el);

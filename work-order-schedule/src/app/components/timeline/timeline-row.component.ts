@@ -99,13 +99,72 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
         transform: translateX(-50%);
         margin-bottom: 4px;
         padding: 4px 8px;
-        font-size: 12px;
-        color: $color-text-secondary;
-        background: $color-bg-primary;
-        border: 1px solid $color-border;
-        border-radius: $radius-default;
+        color: rgba(249, 250, 255, 1);
+        font-family: CircularStd-Book;
+        font-size: 14px;
+        font-weight: 400;
+        font-style: normal;
+        background-color: rgba(104, 113, 150, 1);
+        border-radius: 8px;
         white-space: nowrap;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 4px -2px rgba(200, 207, 233, 1), 0 0 16px -8px rgba(230, 235, 240, 1);
+      }
+
+      .timeline-row-offscreen-labels {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        pointer-events: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 2;
+      }
+
+      .timeline-row-offscreen-label {
+        position: sticky;
+        top: 0;
+        height: 40px;
+        margin: 4px;
+        padding: 0 8px;
+        display: flex;
+        align-items: center;
+        font-family: CircularStd-Book;
+        font-size: 14px;
+        font-weight: 400;
+        font-style: normal;
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        transition: opacity 0.15s ease;
+      }
+
+      .timeline-row-offscreen-label.status-open {
+        color: $color-status-open;
+      }
+
+      .timeline-row-offscreen-label.status-in-progress {
+        color: $color-status-in-progress;
+      }
+
+      .timeline-row-offscreen-label.status-complete {
+        color: $color-status-complete;
+      }
+
+      .timeline-row-offscreen-label.status-blocked {
+        color: $color-status-blocked;
+      }
+
+      .timeline-row-offscreen-label-left {
+        left: 0;
+      }
+
+      .timeline-row-offscreen-label-right {
+        right: 0;
+        margin-left: auto;
       }
     `,
   ],
@@ -117,6 +176,10 @@ export class TimelineRowComponent {
   rangeStart = input.required<Date>();
   rangeEnd = input.required<Date>();
   timelineWidth = input.required<number>();
+  scrollState = input<{ scrollLeft: number; viewportWidth: number }>({
+    scrollLeft: 0,
+    viewportWidth: 0,
+  });
   zoomLevel = input<ZoomLevel>('month');
 
   createRequest = output<{ date: Date; workCenterId: string }>();
@@ -127,11 +190,61 @@ export class TimelineRowComponent {
   hovered = signal(false);
   hoverX = signal<number | null>(null);
   readonly clickHintWidth = 113;
+  /** Min pixels the bar must be off-screen before showing the label (avoids overlap) */
+  private readonly offScreenLabelMinGap = 60;
+  /** Pixels of scroll distance over which the off-screen label fades out */
+  private readonly offScreenLabelFadeZone = 120;
 
   showClickHint = computed(() => {
     const x = this.hoverX();
     if (x === null) return false;
     return !this.isPositionOverWorkOrder(x);
+  });
+
+  /** Work order for bar whose name is off-screen to the left (closest to visible area) */
+  offScreenLeftLabel = computed(() => {
+    const { scrollLeft, viewportWidth } = this.scrollState();
+    const bars = this.barPositions();
+    if (viewportWidth <= 0) return null;
+    const nameOffScreenLeft = bars.filter((b) => b.left < scrollLeft);
+    const closest = nameOffScreenLeft.length > 0
+      ? nameOffScreenLeft.reduce((a, b) => (b.left + b.width > a.left + a.width ? b : a))
+      : null;
+    if (!closest) return null;
+    const distanceFromVisible = scrollLeft - closest.left;
+    const opacity = Math.min(
+      1,
+      Math.max(0, (distanceFromVisible - this.offScreenLabelMinGap) / this.offScreenLabelFadeZone)
+    );
+    return {
+      name: closest.workOrder.data.name,
+      status: closest.workOrder.data.status,
+      opacity,
+    };
+  });
+
+  /** Work order for bar whose name is off-screen to the right (closest to visible area) */
+  offScreenRightLabel = computed(() => {
+    const { scrollLeft, viewportWidth } = this.scrollState();
+    const bars = this.barPositions();
+    if (viewportWidth <= 0) return null;
+    const viewportRight = scrollLeft + viewportWidth;
+    const barLeftMin = viewportRight + this.offScreenLabelMinGap;
+    const nameOffScreenRight = bars.filter((b) => b.left >= barLeftMin);
+    const closest = nameOffScreenRight.length > 0
+      ? nameOffScreenRight.reduce((a, b) => (b.left < a.left ? b : a))
+      : null;
+    if (!closest) return null;
+    const distanceFromVisible = closest.left - viewportRight;
+    const opacity = Math.min(
+      1,
+      Math.max(0, (distanceFromVisible - this.offScreenLabelMinGap) / this.offScreenLabelFadeZone)
+    );
+    return {
+      name: closest.workOrder.data.name,
+      status: closest.workOrder.data.status,
+      opacity,
+    };
   });
 
   clickHintLeft = computed(() => {

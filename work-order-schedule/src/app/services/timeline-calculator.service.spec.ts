@@ -22,7 +22,7 @@ describe('TimelineCalculatorService', () => {
   describe('getVisibleDateRange', () => {
     const years = TIMELINE_RANGE_YEARS;
 
-    it('should return today ± 5 years in days for day zoom', () => {
+    it('should return today ± TIMELINE_RANGE_YEARS in days for day zoom', () => {
       const range = service.getVisibleDateRange('day');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -37,7 +37,7 @@ describe('TimelineCalculatorService', () => {
       expect(range.end.getTime()).toBe(expectedEnd.getTime());
     });
 
-    it('should return today ± 5 years in weeks for week zoom', () => {
+    it('should return today ± TIMELINE_RANGE_YEARS in weeks for week zoom', () => {
       const range = service.getVisibleDateRange('week');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -52,7 +52,7 @@ describe('TimelineCalculatorService', () => {
       expect(range.end.getTime()).toBe(expectedEnd.getTime());
     });
 
-    it('should return today ± 5 years in months for month zoom', () => {
+    it('should return today ± TIMELINE_RANGE_YEARS in months for month zoom', () => {
       const range = service.getVisibleDateRange('month');
       const today = new Date();
       today.setHours(0, 0, 0, 0);

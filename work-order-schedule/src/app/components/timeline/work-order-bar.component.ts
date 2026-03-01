@@ -13,9 +13,19 @@ import type { WorkOrderDocument } from '../../models/work-order';
       [class.continues-left]="continuesLeft"
       [class.continues-right]="continuesRight"
       (click)="$event.stopPropagation()"
-      (mouseenter)="barHovered.set(true)"
-      (mouseleave)="barHovered.set(false)"
+      (mouseenter)="onBarMouseEnter($event)"
+      (mouseleave)="onBarMouseLeave()"
+      (mousemove)="onBarMouseMove($event)"
     >
+      @if (nameTooltipVisible()) {
+        <div
+          class="bar-name-tooltip"
+          [style.top.px]="nameTooltipTop()"
+          [style.left.px]="nameTooltipLeft()"
+        >
+          {{ workOrder().data.name }}
+        </div>
+      }
       <span class="bar-name">{{ workOrder().data.name }}</span>
       <span class="bar-status-pill">{{ formatStatus(workOrder().data.status) }}</span>
       <div class="bar-actions" (click)="$event.stopPropagation()">
@@ -29,6 +39,10 @@ import type { WorkOrderDocument } from '../../models/work-order';
           ⋯
         </button>
         @if (menuOpen()) {
+          <div
+            class="bar-dropdown-backdrop"
+            (click)="menuOpen.set(false)"
+          ></div>
           <div
             class="bar-dropdown"
             [style.top.px]="dropdownTop()"
@@ -62,10 +76,12 @@ import type { WorkOrderDocument } from '../../models/work-order';
         gap: 8px;
         padding: 0 8px;
         cursor: default;
-        overflow: visible;
+        overflow: hidden;
       }
 
       .work-order-bar.status-open {
+        border: 1px solid rgba(206, 251, 255, 1);
+        border-radius: 8px;
         background: $color-status-open-bg;
         color: $color-status-open;
       }
@@ -97,7 +113,11 @@ import type { WorkOrderDocument } from '../../models/work-order';
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 12px;
+        color: rgba(3, 9, 41, 1);
+        font-family: CircularStd-Book;
+        font-size: 14px;
+        font-weight: 400;
+        font-style: normal;
       }
 
       .bar-status-pill {
@@ -112,6 +132,10 @@ import type { WorkOrderDocument } from '../../models/work-order';
       .work-order-bar.status-complete .bar-status-pill {
         background-color: rgba(225, 255, 204, 1);
         color: rgba(8, 162, 104, 1);
+        font-family: CircularStd-Book;
+        font-size: 14px;
+        font-weight: 400;
+        font-style: normal;
       }
 
       .work-order-bar.status-in-progress .bar-status-pill {
@@ -120,10 +144,11 @@ import type { WorkOrderDocument } from '../../models/work-order';
       }
 
       .work-order-bar.status-blocked .bar-status-pill {
+        border-radius: 5px;
         background-color: rgba(252, 238, 181, 1);
+        margin: 2px 8px;
+        padding: 2px 8px;
         color: rgba(177, 54, 0, 1);
-        width: 51px;
-        height: 18px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -185,13 +210,20 @@ import type { WorkOrderDocument } from '../../models/work-order';
         pointer-events: auto;
       }
 
+      .bar-dropdown-backdrop {
+        position: fixed;
+        inset: 0;
+        background: $panel-overlay;
+        z-index: 999;
+      }
+
       .bar-dropdown {
         position: fixed;
         margin-top: 4px;
         background: $color-bg-primary;
         border: 1px solid $color-border;
         border-radius: $radius-default;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        box-shadow: $dropdown-shadow;
         z-index: 1000;
         display: flex;
         flex-direction: column;
@@ -210,6 +242,22 @@ import type { WorkOrderDocument } from '../../models/work-order';
       .bar-dropdown button:hover {
         background: $color-bg-secondary;
       }
+
+      .bar-name-tooltip {
+        position: fixed;
+        z-index: 1001;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: $color-text-secondary;
+        background: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: $radius-default;
+        white-space: normal;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        pointer-events: none;
+        max-width: 320px;
+        word-break: break-word;
+      }
     `,
   ],
 })
@@ -227,12 +275,58 @@ export class WorkOrderBarComponent {
   barHovered = signal(false);
   dropdownTop = signal(0);
   dropdownLeft = signal(0);
+  nameTooltipVisible = signal(false);
+  nameTooltipTop = signal(0);
+  nameTooltipLeft = signal(0);
+  private nameTooltipTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  onBarMouseEnter(event: MouseEvent): void {
+    this.barHovered.set(true);
+    this.nameTooltipTimeout = setTimeout(() => {
+      this.nameTooltipVisible.set(true);
+      this.updateNameTooltipPosition(event);
+    }, 400);
+  }
+
+  onBarMouseLeave(): void {
+    this.barHovered.set(false);
+    if (this.nameTooltipTimeout) {
+      clearTimeout(this.nameTooltipTimeout);
+      this.nameTooltipTimeout = null;
+    }
+    this.nameTooltipVisible.set(false);
+  }
+
+  onBarMouseMove(event: MouseEvent): void {
+    if (this.nameTooltipVisible()) {
+      this.updateNameTooltipPosition(event);
+    }
+  }
+
+  private updateNameTooltipPosition(event: MouseEvent): void {
+    const offset = 12;
+    const tooltipHeight = 32;
+    const tooltipMaxWidth = 320;
+    const spaceAbove = event.clientY;
+    const spaceBelow = window.innerHeight - event.clientY;
+    const showAbove = spaceAbove >= tooltipHeight + offset || spaceBelow < spaceAbove;
+    this.nameTooltipTop.set(
+      showAbove ? event.clientY - tooltipHeight - offset : event.clientY + offset
+    );
+    const left = Math.max(8, Math.min(event.clientX + 12, window.innerWidth - tooltipMaxWidth - 16));
+    this.nameTooltipLeft.set(left);
+  }
 
   onMenuToggle(event: Event): void {
     event.stopPropagation();
     const willOpen = !this.menuOpen();
     this.menuOpen.set(willOpen);
     if (willOpen) {
+      this.nameTooltipVisible.set(false);
+      if (this.nameTooltipTimeout) {
+        clearTimeout(this.nameTooltipTimeout);
+        this.nameTooltipTimeout = null;
+      }
       this.updateDropdownPosition();
     }
   }

@@ -95,7 +95,7 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
         padding: 4px 8px 5px 8px;
         border: none;
         border-radius: 0 5px 5px 0;
-        background: $color-bg-secondary;
+        background: #ffffff;
         color: $dropdown-text-color;
         cursor: pointer;
         font-family: inherit;
@@ -103,7 +103,7 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
       }
 
       .timescale-trigger:hover {
-        background: $color-bg-hover;
+        background: rgba(250, 251, 253, 1);
       }
 
       .timescale-dropdown.open .timescale-trigger {

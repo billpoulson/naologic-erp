@@ -1,5 +1,32 @@
 /* You can add global styles to this file, and also import other style files */
 
+$circular-std-url: 'https://naologic-com-assets.naologic.com/fonts/circular-std';
+
+/* Design font-family aliases (Sketch naming) mapped to Circular Std files */
+@font-face {
+  font-family: 'CircularStd-Regular';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('#{$circular-std-url}/circular-std-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularStd-Book';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('#{$circular-std-url}/circular-std-book.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularStd-Medium';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('#{$circular-std-url}/circular-std-medium.woff2') format('woff2');
+}
+
 @import 'styles/variables';
 
 /* Importing Bootstrap SCSS file. */

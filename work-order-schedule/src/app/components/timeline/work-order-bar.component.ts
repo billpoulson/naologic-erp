@@ -17,15 +17,14 @@ import type { WorkOrderDocument } from '../../models/work-order';
       <span class="bar-name">{{ workOrder().data.name }}</span>
       <span class="bar-status-pill">{{ formatStatus(workOrder().data.status) }}</span>
       <div class="bar-actions" (click)="$event.stopPropagation()">
-        @if (barHovered()) {
-          <button
-            type="button"
-            class="bar-menu-btn"
-            (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()"
-          >
-            ⋮
-          </button>
-        }
+        <button
+          type="button"
+          class="bar-menu-btn"
+          [class.visible]="barHovered() || menuOpen()"
+          (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()"
+        >
+          ⋯
+        </button>
         @if (menuOpen()) {
           <div class="bar-dropdown">
             <button type="button" (click)="edit.emit(workOrder()); menuOpen.set(false)">
@@ -48,6 +47,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
         top: 4px;
         bottom: 4px;
         min-width: 40px;
+        max-height: 38px;
         box-sizing: border-box;
         border-radius: $radius-default;
         display: flex;
@@ -63,17 +63,23 @@ import type { WorkOrderDocument } from '../../models/work-order';
       }
 
       .work-order-bar.status-in-progress {
-        background: $color-status-in-progress-bg;
+        box-shadow: 0 0 0 1px rgba(222, 224, 255, 1);
+        border-radius: 8px;
+        background-color: rgba(237, 238, 255, 1);
         color: $color-status-in-progress;
       }
 
       .work-order-bar.status-complete {
-        background: $color-status-complete-bg;
+        box-shadow: 0 0 0 1px rgba(209, 250, 179, 1);
+        border-radius: 8px;
+        background-color: rgba(248, 255, 243, 1);
         color: $color-status-complete;
       }
 
       .work-order-bar.status-blocked {
-        background: $color-status-blocked-bg;
+        box-shadow: 0 0 0 1px rgba(255, 245, 207, 1);
+        border-radius: 8px;
+        background-color: rgba(255, 252, 241, 1);
         color: $color-status-blocked;
       }
 
@@ -86,9 +92,34 @@ import type { WorkOrderDocument } from '../../models/work-order';
       }
 
       .bar-status-pill {
-        font-size: 10px;
         padding: 2px 6px;
-        border-radius: $radius-default;
+        border-radius: 5px;
+        font-family: CircularStd-Book;
+        font-size: 14px;
+        font-weight: 400;
+      }
+
+      .work-order-bar.status-complete .bar-status-pill {
+        background-color: rgba(225, 255, 204, 1);
+        color: rgba(8, 162, 104, 1);
+      }
+
+      .work-order-bar.status-in-progress .bar-status-pill {
+        background-color: rgba(214, 216, 255, 1);
+        color: rgba(62, 64, 219, 1);
+      }
+
+      .work-order-bar.status-blocked .bar-status-pill {
+        background-color: rgba(252, 238, 181, 1);
+        color: rgba(177, 54, 0, 1);
+        width: 51px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .work-order-bar.status-open .bar-status-pill {
         background: rgba(0, 0, 0, 0.1);
       }
 
@@ -102,6 +133,14 @@ import type { WorkOrderDocument } from '../../models/work-order';
         cursor: pointer;
         padding: 2px 4px;
         font-size: 14px;
+        min-width: 12px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .bar-menu-btn.visible {
+        opacity: 1;
+        pointer-events: auto;
       }
 
       .bar-dropdown {

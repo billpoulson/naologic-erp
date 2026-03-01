@@ -2,7 +2,7 @@ import { Directive, ElementRef, inject, OnInit, OnDestroy } from '@angular/core'
 import { ZoomLevelService } from '../services/zoom-level.service';
 import type { ZoomLevel } from '../services/timeline-calculator.service';
 
-const ZOOM_ORDER: ZoomLevel[] = ['month', 'week', 'day'];
+const ZOOM_ORDER: ZoomLevel[] = ['month', 'week', 'day', 'hours'];
 
 /**
  * Handles wheel events for timeline zoom. Uses addEventListener with passive: false

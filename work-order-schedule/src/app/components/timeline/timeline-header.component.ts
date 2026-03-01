@@ -29,15 +29,21 @@ import type { ZoomLevel } from '../../services/timeline-calculator.service';
         height: 33px;
         border-bottom: 1px solid rgba(230, 235, 240, 1);
         position: relative;
+        background-color: rgba(255, 255, 255, 1);
       }
 
       .timeline-header-cell {
         flex-shrink: 0;
         padding: 0 8px;
+        background-color: rgba(255, 255, 255, 1);
         display: flex;
         align-items: center;
-        font-size: 12px;
-        color: $color-text-secondary;
+        justify-content: center;
+        color: rgba(104, 113, 150, 1);
+        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
       }
 
       .timeline-header-today {

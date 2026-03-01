@@ -157,5 +157,69 @@ describe('TimelineRowComponent', () => {
       const width = parseInt(bar.style.width || '0', 10);
       expect(width).toBeGreaterThanOrEqual(40);
     });
+
+    it('should align single-day work order to day column width in day view', () => {
+      const rangeStart = new Date(2025, 0, 1, 0, 0, 0, 0);
+      const rangeEnd = new Date(2025, 0, 4, 0, 0, 0, 0);
+      const colWidth = 60;
+      const timelineWidth = 3 * colWidth;
+
+      fixture.componentRef.setInput('rangeStart', rangeStart);
+      fixture.componentRef.setInput('rangeEnd', rangeEnd);
+      fixture.componentRef.setInput('timelineWidth', timelineWidth);
+      fixture.componentRef.setInput('zoomLevel', 'day');
+
+      const orders = [createWorkOrder({ startDate: '2025-01-02', endDate: '2025-01-02' })];
+      fixture.componentRef.setInput('workOrders', orders);
+      fixture.detectChanges();
+
+      const barHost = fixture.nativeElement.querySelector('app-work-order-bar');
+      const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
+      const left = parseInt(bar.style.left || '0', 10);
+      const width = parseInt(bar.style.width || '0', 10);
+
+      const woStart = calculator.parseLocalDate('2025-01-02');
+      const woEndExclusive = new Date(woStart);
+      woEndExclusive.setDate(woEndExclusive.getDate() + 1);
+      const expectedLeft = calculator.dateToPosition(
+        woStart,
+        rangeStart,
+        rangeEnd,
+        timelineWidth
+      );
+      const expectedRight = calculator.dateToPosition(
+        woEndExclusive,
+        rangeStart,
+        rangeEnd,
+        timelineWidth
+      );
+      const expectedWidth = Math.max(40, Math.round(expectedRight - expectedLeft));
+
+      expect(Math.abs(left - expectedLeft)).toBeLessThan(2);
+      expect(Math.abs(width - expectedWidth)).toBeLessThan(2);
+      expect(left).toBe(colWidth);
+    });
+
+    it('should align work order to timeline scale for any zoom level', () => {
+      const rangeStart = new Date(2025, 0, 1, 0, 0, 0, 0);
+      const rangeEnd = new Date(2025, 0, 2, 0, 0, 0, 0);
+      const colWidth = 40;
+      const timelineWidth = 24 * colWidth;
+
+      fixture.componentRef.setInput('rangeStart', rangeStart);
+      fixture.componentRef.setInput('rangeEnd', rangeEnd);
+      fixture.componentRef.setInput('timelineWidth', timelineWidth);
+      fixture.componentRef.setInput('zoomLevel', 'hours');
+
+      const orders = [createWorkOrder({ startDate: '2025-01-01', endDate: '2025-01-01' })];
+      fixture.componentRef.setInput('workOrders', orders);
+      fixture.detectChanges();
+
+      const barHost = fixture.nativeElement.querySelector('app-work-order-bar');
+      const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
+      const left = parseInt(bar.style.left || '0', 10);
+
+      expect(left).toBe(0);
+    });
   });
 });

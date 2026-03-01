@@ -3,6 +3,7 @@ import { ZoomLevelService } from '../../services/zoom-level.service';
 import type { ZoomLevel } from '../../services/timeline-calculator.service';
 
 const OPTIONS: { value: ZoomLevel; label: string }[] = [
+  { value: 'hours', label: 'Hours' },
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
@@ -94,6 +95,7 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
         justify-content: space-between;
         padding: 4px 8px 5px 8px;
         border: none;
+        outline: none;
         border-radius: 0 5px 5px 0;
         background: #ffffff;
         color: $dropdown-text-color;
@@ -106,12 +108,16 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
         background: rgba(250, 251, 253, 1);
       }
 
+      .timescale-trigger:focus {
+        outline: none;
+      }
+
       .timescale-dropdown.open .timescale-trigger {
-        outline: 1px solid $color-border-focus;
-        outline-offset: -1px;
+        outline: none;
       }
 
       .timescale-text {
+        color: rgba(62, 64, 219, 1);
         font-family: CircularStd-Medium, 'Circular-Std', sans-serif;
         font-size: 13px;
         font-weight: 500;
@@ -126,38 +132,40 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
         display: flex;
         align-items: center;
         justify-content: center;
-        color: $dropdown-text-color;
-        transition: transform 0.2s ease;
+        color: #687196;
       }
 
       .chevron.open {
-        transform: rotate(180deg);
+        color: #5659FF;
       }
 
       .timescale-menu {
         position: absolute;
         top: 100%;
-        left: 0;
-        margin-top: 4px;
-        min-width: 100%;
-        background: $color-bg-primary;
-        border: 1px solid $color-border;
-        border-radius: $radius-dropdown;
-        box-shadow: $dropdown-shadow;
+        left: -75px;
+        margin-top: 5px;
+        min-width: 200px;
+        box-shadow: 0 0 0 1px rgba(104, 113, 150, 0.1), 0 2.5px 3px -1.5px rgba(200, 207, 233, 1), 0 4.5px 5px -1px rgba(216, 220, 235, 1);
+        border-radius: 5px;
+        background-color: rgba(255, 255, 255, 1);
         z-index: 100;
         display: flex;
         flex-direction: column;
+        padding: 12px 0;
       }
 
       .timescale-option {
-        padding: 8px 12px;
+        padding: 5px 0 5px 12px;
+        margin: 0;
         border: none;
         background: none;
         text-align: left;
         cursor: pointer;
-        font-size: 13px;
-        font-family: inherit;
-        color: $color-text-primary;
+        font-family: CircularStd-Book, 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+        font-style: normal;
+        color: rgba(47, 48, 89, 1);
       }
 
       .timescale-option:hover {
@@ -165,8 +173,7 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
       }
 
       .timescale-option.selected {
-        color: $dropdown-text-color;
-        font-weight: 500;
+        color: rgba(62, 64, 219, 1);
       }
     `,
   ],

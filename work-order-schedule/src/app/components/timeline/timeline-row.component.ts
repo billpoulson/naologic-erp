@@ -1,5 +1,8 @@
 import { Component, input, output, computed, signal, inject } from '@angular/core';
-import { TimelineCalculatorService } from '../../services/timeline-calculator.service';
+import {
+  TimelineCalculatorService,
+  type ZoomLevel,
+} from '../../services/timeline-calculator.service';
 import { TimelinePanService } from '../../services/timeline-pan.service';
 import type { WorkCenterDocument } from '../../models/work-center';
 import type { WorkOrderDocument } from '../../models/work-order';
@@ -13,9 +16,10 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
     <div
       class="timeline-row"
       (click)="onRowClick($event)"
-      (mouseenter)="hovered.set(true)"
-      (mouseleave)="hovered.set(false)"
-      [class.hovered]="hovered()"
+      (mouseenter)="onMouseEnter()"
+      (mouseleave)="onMouseLeave()"
+      (mousemove)="onMouseMove($event)"
+      [class.hovered]="hovered() || isHoveredFromCell()"
     >
       <div
         class="timeline-row-content"
@@ -31,8 +35,14 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
             (delete)="deleteRequest.emit($event)"
           />
         }
-        @if (hovered() && showClickHint()) {
-          <div class="click-hint">Click to add dates</div>
+        @if ((hovered() || isHoveredFromCell()) && showClickHint()) {
+          <div
+            class="click-hint-bar"
+            [style.left.px]="clickHintLeft()"
+            [style.width.px]="clickHintWidth"
+          >
+            <span class="click-hint-tooltip">Click to add dates</span>
+          </div>
         }
       </div>
     </div>
@@ -45,48 +55,103 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
         display: flex;
         height: 48px;
         min-height: 48px;
-        border-bottom: 1px solid rgba(230, 235, 240, 1);
         cursor: pointer;
-        background-color: rgba(255, 255, 255, 1);
+        background-color: rgba(247, 249, 252, 1);
         transition: background-color 0.15s ease;
       }
 
       .timeline-row:hover,
       .timeline-row.hovered {
-        background-color: rgba(250, 251, 253, 1);
+        background-color: rgba(238, 240, 255, 1);
       }
 
       .timeline-row-content {
         position: relative;
         flex: 0 0 auto;
         min-height: 48px;
+        margin: 0;
+        padding: 0;
       }
 
-      .click-hint {
+      .click-hint-bar {
         position: absolute;
-        top: 50%;
+        top: 4px;
+        bottom: 4px;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        box-shadow: 0 0 0 1px rgba(222, 224, 255, 1);
+        border-radius: 8px;
+        background-color: rgba(237, 238, 255, 1);
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .click-hint-tooltip {
+        position: absolute;
+        bottom: 100%;
         left: 50%;
-        transform: translate(-50%, -50%);
+        transform: translateX(-50%);
+        margin-bottom: 4px;
+        padding: 4px 8px;
         font-size: 12px;
         color: $color-text-secondary;
-        pointer-events: none;
+        background: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: $radius-default;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
     `,
   ],
 })
 export class TimelineRowComponent {
   workCenter = input.required<WorkCenterDocument>();
+  isHoveredFromCell = input<boolean>(false);
   workOrders = input<WorkOrderDocument[]>([]);
   rangeStart = input.required<Date>();
   rangeEnd = input.required<Date>();
   timelineWidth = input.required<number>();
+  zoomLevel = input<ZoomLevel>('month');
 
   createRequest = output<{ date: Date; workCenterId: string }>();
   editRequest = output<WorkOrderDocument>();
   deleteRequest = output<WorkOrderDocument>();
+  hoverChange = output<string | null>();
 
   hovered = signal(false);
-  showClickHint = signal(true);
+  hoverX = signal<number | null>(null);
+  readonly clickHintWidth = 113;
+
+  showClickHint = computed(() => {
+    const x = this.hoverX();
+    if (x === null) return false;
+    return !this.isPositionOverWorkOrder(x);
+  });
+
+  clickHintLeft = computed(() => {
+    const x = this.hoverX();
+    const width = this.timelineWidth();
+    const bars = this.barPositions();
+    if (x === null) return 0;
+
+    let left = x - this.clickHintWidth / 2;
+    left = Math.max(0, Math.min(width - this.clickHintWidth, left));
+
+    for (const bar of bars) {
+      const barRight = bar.left + bar.width;
+      if (barRight <= x) {
+        left = Math.max(left, barRight);
+      }
+      if (bar.left >= x) {
+        left = Math.min(left, bar.left - this.clickHintWidth);
+      }
+    }
+
+    return Math.max(0, Math.min(width - this.clickHintWidth, left));
+  });
 
   constructor(
     private calculator: TimelineCalculatorService,
@@ -119,6 +184,31 @@ export class TimelineRowComponent {
       };
     });
   });
+
+  onMouseEnter(): void {
+    this.hovered.set(true);
+    this.hoverChange.emit(this.workCenter().docId);
+  }
+
+  onMouseLeave(): void {
+    this.hovered.set(false);
+    this.hoverX.set(null);
+    this.hoverChange.emit(null);
+  }
+
+  onMouseMove(event: MouseEvent): void {
+    const row = event.currentTarget as HTMLElement;
+    const content = row.querySelector('.timeline-row-content') as HTMLElement;
+    if (!content) return;
+    const rect = content.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    this.hoverX.set(x);
+  }
+
+  private isPositionOverWorkOrder(x: number): boolean {
+    const bars = this.barPositions();
+    return bars.some((bar) => x >= bar.left && x <= bar.left + bar.width);
+  }
 
   onRowClick(event: MouseEvent): void {
     if (this.panService.consumeAndReset()) return;

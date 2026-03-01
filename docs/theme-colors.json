@@ -1,0 +1,46 @@
+{
+  "_source": "Verified from Sketch design pages (March 2025)",
+  "backgrounds": {
+    "primary": "#FFFFFF",
+    "secondary": "#F9F9FB",
+    "secondaryAlt": "#F8F8F8",
+    "hover": "#E8E8FF",
+    "hoverAlt": "#E0E7F5",
+    "canvas": "#282a2e"
+  },
+  "text": {
+    "primary": "#333333",
+    "primaryAlt": "#000000",
+    "secondary": "#888888",
+    "secondaryAlt": "#AAAAAA",
+    "interactive": "#1890FF",
+    "interactiveAlt": "#4F46E5"
+  },
+  "accent": {
+    "primary": "#5C6BC0",
+    "primaryAlt": "#4F46E5",
+    "logo": "#5C6BC0"
+  },
+  "status": {
+    "open": "#1890FF",
+    "openBg": "#E6F7FF",
+    "inProgress": "#A78BFA",
+    "inProgressBg": "#E0D9FA",
+    "inProgressAlt": "#C4B5FD",
+    "blocked": "#FACC15",
+    "blockedBg": "#FFECB3",
+    "complete": "#4CAF50",
+    "completeBg": "#C8E6C9",
+    "plan": "#9C27B0",
+    "planBg": "#E1BEE7",
+    "canceled": "#F44336",
+    "currentMonth": "#52C4B7",
+    "currentMonthBg": "#AECBFA"
+  },
+  "borders": {
+    "default": "#E0E0E0",
+    "defaultAlt": "#DEDEDE",
+    "defaultAlt2": "#EEEEEE",
+    "focus": "#5C6BC0"
+  }
+}

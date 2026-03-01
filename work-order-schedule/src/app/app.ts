@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
 import { WorkOrderScheduleComponent } from './components/work-order-schedule/work-order-schedule.component';
-import { TimescaleSelectComponent } from './components/timescale-select/timescale-select.component';
+import { TimelineHeadingComponent } from './components/timeline-heading/timeline-heading.component';
 
 @Component({
   selector: 'app-root',
-  imports: [WorkOrderScheduleComponent, TimescaleSelectComponent],
+  imports: [WorkOrderScheduleComponent, TimelineHeadingComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

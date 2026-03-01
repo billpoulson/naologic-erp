@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, Input, output, signal, ViewChild, ElementRef } from '@angular/core';
 import type { WorkOrderDocument } from '../../models/work-order';
 
 @Component({
@@ -10,6 +10,8 @@ import type { WorkOrderDocument } from '../../models/work-order';
       [style.left.px]="left()"
       [style.width.px]="width()"
       [class]="'status-' + workOrder().data.status"
+      [class.continues-left]="continuesLeft"
+      [class.continues-right]="continuesRight"
       (click)="$event.stopPropagation()"
       (mouseenter)="barHovered.set(true)"
       (mouseleave)="barHovered.set(false)"
@@ -18,15 +20,20 @@ import type { WorkOrderDocument } from '../../models/work-order';
       <span class="bar-status-pill">{{ formatStatus(workOrder().data.status) }}</span>
       <div class="bar-actions" (click)="$event.stopPropagation()">
         <button
+          #menuBtn
           type="button"
           class="bar-menu-btn"
           [class.visible]="barHovered() || menuOpen()"
-          (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()"
+          (click)="onMenuToggle($event)"
         >
           ⋯
         </button>
         @if (menuOpen()) {
-          <div class="bar-dropdown">
+          <div
+            class="bar-dropdown"
+            [style.top.px]="dropdownTop()"
+            [style.left.px]="dropdownLeft()"
+          >
             <button type="button" (click)="edit.emit(workOrder()); menuOpen.set(false)">
               Edit
             </button>
@@ -55,6 +62,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
         gap: 8px;
         padding: 0 8px;
         cursor: default;
+        overflow: visible;
       }
 
       .work-order-bar.status-open {
@@ -85,6 +93,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
 
       .bar-name {
         flex: 1;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -92,6 +101,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
       }
 
       .bar-status-pill {
+        flex-shrink: 0;
         padding: 2px 6px;
         border-radius: 5px;
         font-family: CircularStd-Book;
@@ -120,11 +130,43 @@ import type { WorkOrderDocument } from '../../models/work-order';
       }
 
       .work-order-bar.status-open .bar-status-pill {
-        background: rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(206, 251, 255, 1);
+        border-radius: 5px;
+        background-color: rgba(228, 253, 255, 1);
+        color: rgba(0, 176, 191, 1);
+        font-family: CircularStd-Regular;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
+      }
+
+      .work-order-bar.continues-left::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.2), transparent);
+        border-radius: 8px 0 0 8px;
+        pointer-events: none;
+      }
+
+      .work-order-bar.continues-right::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        background: linear-gradient(to left, rgba(0, 0, 0, 0.2), transparent);
+        border-radius: 0 8px 8px 0;
+        pointer-events: none;
       }
 
       .bar-actions {
         position: relative;
+        flex-shrink: 0;
       }
 
       .bar-menu-btn {
@@ -144,15 +186,13 @@ import type { WorkOrderDocument } from '../../models/work-order';
       }
 
       .bar-dropdown {
-        position: absolute;
-        top: 100%;
-        right: 0;
+        position: fixed;
         margin-top: 4px;
         background: $color-bg-primary;
         border: 1px solid $color-border;
         border-radius: $radius-default;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        z-index: 10;
+        z-index: 1000;
         display: flex;
         flex-direction: column;
         min-width: 80px;
@@ -174,13 +214,44 @@ import type { WorkOrderDocument } from '../../models/work-order';
   ],
 })
 export class WorkOrderBarComponent {
+  @ViewChild('menuBtn') menuBtnRef?: ElementRef<HTMLButtonElement>;
+
   workOrder = input.required<WorkOrderDocument>();
   left = input<number>(0);
   width = input<number>(100);
+  @Input() continuesLeft = false;
+  @Input() continuesRight = false;
   edit = output<WorkOrderDocument>();
   delete = output<WorkOrderDocument>();
   menuOpen = signal(false);
   barHovered = signal(false);
+  dropdownTop = signal(0);
+  dropdownLeft = signal(0);
+
+  onMenuToggle(event: Event): void {
+    event.stopPropagation();
+    const willOpen = !this.menuOpen();
+    this.menuOpen.set(willOpen);
+    if (willOpen) {
+      this.updateDropdownPosition();
+    }
+  }
+
+  private updateDropdownPosition(): void {
+    setTimeout(() => {
+      const btn = this.menuBtnRef?.nativeElement;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const dropdownHeight = 80;
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const openDown = spaceBelow >= dropdownHeight || spaceBelow >= rect.top;
+      this.dropdownTop.set(
+        openDown ? rect.bottom + 4 : rect.top - dropdownHeight - 4
+      );
+      this.dropdownLeft.set(Math.max(8, rect.right - 80));
+    }, 0);
+  }
 
   formatStatus(status: string): string {
     return status === 'in-progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1);

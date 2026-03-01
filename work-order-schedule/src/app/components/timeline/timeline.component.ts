@@ -378,22 +378,6 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       if (zoom !== 'day' && zoom !== 'hours') return;
       setTimeout(() => this.scrollToShowNow(), 0);
     });
-    effect(() => {
-      const range = this.rangeService.dateRange();
-      const orders = this.workOrders();
-      if (!range || orders.length === 0) return;
-
-      const maxEnd = this.getMaxWorkOrderEndDate();
-      const minStart = this.getMinWorkOrderStartDate();
-      if (maxEnd) {
-        const endPlusOne = this.calculator.addDays(new Date(maxEnd), 1);
-        this.rangeService.extendToIncludeDate(endPlusOne);
-      }
-      if (minStart) {
-        const startMinusOne = this.calculator.addDays(new Date(minStart), -1);
-        this.rangeService.extendToIncludeDate(startMinusOne);
-      }
-    });
   }
 
   private resizeObserver: ResizeObserver | null = null;
@@ -582,11 +566,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         range.end,
         width
       );
-      const maxWoEnd = this.getMaxWorkOrderEndDate();
-      const minEnd = maxWoEnd
-        ? this.calculator.addDays(new Date(maxWoEnd), 1)
-        : undefined;
-      this.rangeService.extendForward(zoom, minEnd);
+      this.rangeService.extendForward(zoom);
       this.scheduleExtendForwardCallback(el, visibleEndDate, dragEvent);
     }
   }
@@ -636,11 +616,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
           range.end,
           width
         );
-        const maxWoEnd = this.getMaxWorkOrderEndDate();
-        const minEnd = maxWoEnd
-          ? this.calculator.addDays(new Date(maxWoEnd), 1)
-          : undefined;
-        this.rangeService.extendForward(this.zoomLevel(), minEnd);
+        this.rangeService.extendForward(this.zoomLevel());
         this.scheduleExtendForwardCallback(el, visibleEnd, dragEvent);
       } else {
         this.extendForwardIteration = 0;
@@ -664,31 +640,4 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  /** Returns the latest end date among all work orders, or undefined if none. */
-  private getMaxWorkOrderEndDate(): Date | undefined {
-    const orders = this.workOrders();
-    if (orders.length === 0) return undefined;
-    let max: Date | null = null;
-    for (const wo of orders) {
-      const end = this.calculator.parseLocalDate(wo.data.endDate);
-      if (!max || end.getTime() > max.getTime()) {
-        max = end;
-      }
-    }
-    return max ?? undefined;
-  }
-
-  /** Returns the earliest start date among all work orders, or undefined if none. */
-  private getMinWorkOrderStartDate(): Date | undefined {
-    const orders = this.workOrders();
-    if (orders.length === 0) return undefined;
-    let min: Date | null = null;
-    for (const wo of orders) {
-      const start = this.calculator.parseLocalDate(wo.data.startDate);
-      if (!min || start.getTime() < min.getTime()) {
-        min = start;
-      }
-    }
-    return min ?? undefined;
-  }
 }

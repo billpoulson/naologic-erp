@@ -31,6 +31,8 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
             [workOrder]="bar.workOrder"
             [left]="bar.left"
             [width]="bar.width"
+            [continuesLeft]="bar.continuesLeft"
+            [continuesRight]="bar.continuesRight"
             (edit)="editRequest.emit($event)"
             (delete)="deleteRequest.emit($event)"
           />
@@ -71,6 +73,7 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
         min-height: 48px;
         margin: 0;
         padding: 0;
+        overflow: visible;
       }
 
       .click-hint-bar {
@@ -165,7 +168,13 @@ export class TimelineRowComponent {
     const width = this.timelineWidth();
 
     if (!start || !end || width <= 0) {
-      return orders.map((wo) => ({ workOrder: wo, left: 0, width: 40 }));
+      return orders.map((wo) => ({
+        workOrder: wo,
+        left: 0,
+        width: 40,
+        continuesLeft: false,
+        continuesRight: false,
+      }));
     }
 
     return orders.map((wo) => {
@@ -176,11 +185,15 @@ export class TimelineRowComponent {
       const unclamped = { clamp: false } as const;
       const left = this.calculator.dateToPosition(woStart, start, end, width, unclamped);
       const right = this.calculator.dateToPosition(woEndExclusive, start, end, width, unclamped);
-      const barWidth = Math.max(40, Math.round(right - left));
+      const visibleLeft = Math.max(0, left);
+      const visibleRight = Math.min(width, right);
+      const barWidth = Math.max(40, Math.round(visibleRight - visibleLeft));
       return {
         workOrder: wo,
-        left: Math.round(left),
+        left: Math.round(visibleLeft),
         width: barWidth,
+        continuesLeft: left < 0,
+        continuesRight: right > width,
       };
     });
   });

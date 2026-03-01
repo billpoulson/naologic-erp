@@ -26,8 +26,8 @@ import type { ZoomLevel } from '../../services/timeline-calculator.service';
       .timeline-header {
         display: flex;
         flex-shrink: 0;
-        height: 40px;
-        border-bottom: 1px solid $color-border;
+        height: 33px;
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
         position: relative;
       }
 

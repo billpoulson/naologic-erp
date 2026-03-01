@@ -43,20 +43,23 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
 
       .timeline-row {
         display: flex;
-        min-height: 44px;
-        border-bottom: 1px solid $color-border-light;
+        height: 48px;
+        min-height: 48px;
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
         cursor: pointer;
+        background-color: rgba(255, 255, 255, 1);
+        transition: background-color 0.15s ease;
       }
 
       .timeline-row:hover,
       .timeline-row.hovered {
-        background: $color-bg-hover;
+        background-color: rgba(250, 251, 253, 1);
       }
 
       .timeline-row-content {
         position: relative;
         flex: 0 0 auto;
-        min-height: 44px;
+        min-height: 48px;
       }
 
       .click-hint {

@@ -28,9 +28,9 @@ const DRAG_THRESHOLD_PX = 5;
     <div class="timeline">
       <div class="timeline-grid">
         <div class="timeline-left">
-          <div class="timeline-left-header">Work Center</div>
+          <div class="timeline-left-header"><span>Work Center</span></div>
           @for (wc of workCenters(); track wc.docId) {
-            <div class="timeline-left-cell">{{ wc.data.name }}</div>
+            <div class="timeline-left-cell"><span>{{ wc.data.name }}</span></div>
           }
         </div>
         <div
@@ -41,13 +41,19 @@ const DRAG_THRESHOLD_PX = 5;
           (scroll)="onScroll($event)"
           (mousedown)="onMouseDown($event)"
         >
-          <app-timeline-header
-            [labels]="headerLabels()"
-            [width]="timelineWidth()"
-            [cellWidth]="cellWidth()"
-            [todayPosition]="todayPosition()"
-          />
-          <div class="timeline-rows" [style.width.px]="timelineWidth()">
+          <div class="timeline-scroll-content" [style.width.px]="timelineWidth()">
+            <div class="timeline-scale-grid" [style.width.px]="timelineWidth()">
+              @for (pos of scaleBoundaryPositions(); track pos) {
+                <div class="scale-boundary" [style.left.px]="pos"></div>
+              }
+            </div>
+            <app-timeline-header
+              [labels]="headerLabels()"
+              [width]="timelineWidth()"
+              [cellWidth]="cellWidth()"
+              [todayPosition]="todayPosition()"
+            />
+            <div class="timeline-rows" [style.width.px]="timelineWidth()">
             @for (wc of workCenters(); track wc.docId) {
               <app-timeline-row
                 [workCenter]="wc"
@@ -60,6 +66,7 @@ const DRAG_THRESHOLD_PX = 5;
                 (deleteRequest)="deleteRequest.emit($event)"
               />
             }
+            </div>
           </div>
         </div>
       </div>
@@ -80,34 +87,89 @@ const DRAG_THRESHOLD_PX = 5;
         display: flex;
         flex: 1;
         overflow: hidden;
+        border-top: 1px solid rgba(230, 235, 240, 1);
+        border-left: 1px solid rgba(230, 235, 240, 1);
       }
 
       .timeline-left {
-        width: $layout-work-center-width;
+        width: 380px;
         flex-shrink: 0;
-        border-right: 1px solid $color-border;
+        border-right: 1px solid rgba(230, 235, 240, 1);
         display: flex;
         flex-direction: column;
       }
 
       .timeline-left-header {
-        height: 40px;
-        padding: 0 $spacing-md;
+        height: 33px;
+        min-height: 33px;
+        padding: 8px 0 8px 31px;
         display: flex;
         align-items: center;
-        font-size: 12px;
-        font-weight: 600;
-        color: $color-text-secondary;
-        border-bottom: 1px solid $color-border;
+        justify-content: flex-start;
+        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(104, 113, 150, 1);
+        text-align: left;
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
+      }
+
+      .timeline-left-header span {
+        width: 86px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
       }
 
       .timeline-left-cell {
-        min-height: 44px;
-        padding: 0 $spacing-md;
+        width: 380px;
+        height: 48px;
+        min-height: 48px;
+        padding: 16px 0 16px 31px;
         display: flex;
         align-items: center;
-        font-size: 13px;
-        border-bottom: 1px solid $color-border-light;
+        background-color: rgba(255, 255, 255, 1);
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
+        border-right: 1px solid rgba(230, 235, 240, 1);
+        transition: background-color 0.15s ease;
+      }
+
+      .timeline-left-cell:hover {
+        background-color: rgba(250, 251, 253, 1);
+      }
+
+      .timeline-left-cell span {
+        height: 16px;
+        color: rgba(3, 9, 41, 1);
+        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+      }
+
+      .timeline-scroll-content {
+        position: relative;
+        min-width: min-content;
+        min-height: 100%;
+      }
+
+      .timeline-scale-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .scale-boundary {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: rgba(230, 235, 240, 1);
       }
 
       .timeline-right {
@@ -163,6 +225,15 @@ export class TimelineComponent {
       this.timelineWidth()
     )
   );
+  scaleBoundaryPositions = computed(() => {
+    const labels = this.headerLabels();
+    const cw = this.cellWidth();
+    const positions: number[] = [];
+    for (let i = 1; i < labels.length; i++) {
+      positions.push(i * cw);
+    }
+    return positions;
+  });
 
   private extendingBackward = false;
   private dragStartX: number | null = null;
@@ -214,6 +285,7 @@ export class TimelineComponent {
   onScroll(event: Event): void {
     const el = event.target as HTMLElement;
     if (!el || this.extendingBackward) return;
+    if (this.dragStartX !== null) return;
 
     const { scrollLeft, clientWidth, scrollWidth } = el;
     const zoom = this.zoomLevel();

@@ -24,6 +24,7 @@ import { TimelineHeaderComponent } from './timeline-header.component';
 import { TimelineRowComponent } from './timeline-row.component';
 import { TimelineAnnotationComponent } from './timeline-annotation.component';
 import { FormsModule } from '@angular/forms';
+import { NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { TimelineWheelZoomDirective } from '../../directives/timeline-wheel-zoom.directive';
 import { TimelineDebugTooltipDirective } from '../../directives/timeline-debug-tooltip.directive';
 
@@ -45,6 +46,7 @@ const HEADER_HEIGHT_PX = 44;
     TimelineRowComponent,
     TimelineAnnotationComponent,
     FormsModule,
+    NgbDatepickerModule,
     TimelineWheelZoomDirective,
     TimelineDebugTooltipDirective,
   ],
@@ -121,9 +123,45 @@ const HEADER_HEIGHT_PX = 44;
                           type="button"
                           class="filter-clear-btn"
                           [class.visible]="filterQuery().length > 0"
-                          aria-label="Clear filter"
+                          aria-label="Clear name filter"
                           (click)="filterQuery.set(''); $event.stopPropagation()"
-                          title="Clear filter"
+                          title="Clear name filter"
+                        >
+                          <span aria-hidden="true">×</span>
+                        </button>
+                      </div>
+                      <div class="filter-dropdown-row filter-date-row">
+                        <label class="filter-date-label">Date range</label>
+                        <div class="filter-date-inputs">
+                          <input
+                            class="timeline-filter-input filter-date-input"
+                            placeholder="Start"
+                            ngbDatepicker
+                            #dpStart="ngbDatepicker"
+                            (click)="dpStart.toggle(); $event.stopPropagation()"
+                            [ngModel]="filterStartDate()"
+                            (ngModelChange)="filterStartDate.set($event)"
+                            aria-label="Filter start date"
+                          />
+                          <span class="filter-date-sep">–</span>
+                          <input
+                            class="timeline-filter-input filter-date-input"
+                            placeholder="End"
+                            ngbDatepicker
+                            #dpEnd="ngbDatepicker"
+                            (click)="dpEnd.toggle(); $event.stopPropagation()"
+                            [ngModel]="filterEndDate()"
+                            (ngModelChange)="filterEndDate.set($event)"
+                            aria-label="Filter end date"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          class="filter-clear-btn"
+                          [class.visible]="hasDateFilter()"
+                          aria-label="Clear date filter"
+                          (click)="clearDateFilter(); $event.stopPropagation()"
+                          title="Clear date filter"
                         >
                           <span aria-hidden="true">×</span>
                         </button>
@@ -368,6 +406,7 @@ const HEADER_HEIGHT_PX = 44;
         position: fixed;
         z-index: 1000;
         padding: 8px;
+        min-width: 304px;
         background: rgba(255, 255, 255, 1);
         border: 1px solid rgba(230, 235, 240, 1);
         border-radius: 8px;
@@ -378,6 +417,38 @@ const HEADER_HEIGHT_PX = 44;
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+
+      .filter-date-row {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(230, 235, 240, 1);
+      }
+
+      .filter-date-label {
+        flex-shrink: 0;
+        width: 70px;
+        font-size: 12px;
+        color: rgba(104, 113, 150, 1);
+      }
+
+      .filter-date-inputs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .filter-date-input {
+        flex: 1;
+        min-width: 90px;
+      }
+
+      .filter-date-sep {
+        flex-shrink: 0;
+        color: rgba(104, 113, 150, 0.7);
+        font-size: 12px;
       }
 
       .filter-clear-btn {
@@ -631,13 +702,40 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   });
 
   filterQuery = signal('');
+  filterStartDate = signal<NgbDateStruct | null>(null);
+  filterEndDate = signal<NgbDateStruct | null>(null);
 
-  /** Work centers after applying text filter */
+  hasDateFilter = computed(() => {
+    const start = this.filterStartDate();
+    const end = this.filterEndDate();
+    return start !== null && end !== null;
+  });
+
+  /** Work centers after applying text and date filters */
   filteredWorkCenters = computed(() => {
     const centers = this.workCenters();
+    const orders = this.workOrders();
     const query = this.filterQuery().trim().toLowerCase();
-    if (!query) return centers;
-    return centers.filter((wc) => wc.data.name.toLowerCase().includes(query));
+    const startNgb = this.filterStartDate();
+    const endNgb = this.filterEndDate();
+
+    let result = centers;
+    if (query) {
+      result = result.filter((wc) => wc.data.name.toLowerCase().includes(query));
+    }
+    if (startNgb && endNgb) {
+      const filterStartMs = new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime();
+      const filterEndMs = new Date(endNgb.year, endNgb.month - 1, endNgb.day, 23, 59, 59, 999).getTime();
+      result = result.filter((wc) =>
+        orders.some((wo) => {
+          if (wo.data.workCenterId !== wc.docId) return false;
+          const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+          const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+          return woStart <= filterEndMs && woEnd >= filterStartMs;
+        })
+      );
+    }
+    return result;
   });
 
   /** Visible work centers (max 50) based on scroll position - sliding window */
@@ -990,7 +1088,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         if (!btn) return;
         const rect = btn.getBoundingClientRect();
         this.filterDropdownTop.set(rect.bottom + 4);
-        this.filterDropdownLeft.set(rect.right - 200);
+        this.filterDropdownLeft.set(rect.right - 320);
       }, 0);
     }
   }
@@ -998,17 +1096,37 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   getOrdersForCenter(workCenterId: string): WorkOrderDocument[] {
     const range = this.dateRange();
     const orders = this.workOrders();
-    if (!range) {
-      return orders.filter((wo) => wo.data.workCenterId === workCenterId);
+    const startNgb = this.filterStartDate();
+    const endNgb = this.filterEndDate();
+
+    let result = orders.filter((wo) => wo.data.workCenterId === workCenterId);
+
+    if (range) {
+      const rangeStartMs = range.start.getTime();
+      const rangeEndMs = range.end.getTime();
+      result = result.filter((wo) => {
+        const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+        const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+        return woStart < rangeEndMs && woEnd > rangeStartMs;
+      });
     }
-    const rangeStartMs = range.start.getTime();
-    const rangeEndMs = range.end.getTime();
-    return orders.filter((wo) => {
-      if (wo.data.workCenterId !== workCenterId) return false;
-      const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
-      const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
-      return woStart < rangeEndMs && woEnd > rangeStartMs;
-    });
+
+    if (startNgb && endNgb) {
+      const filterStartMs = new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime();
+      const filterEndMs = new Date(endNgb.year, endNgb.month - 1, endNgb.day, 23, 59, 59, 999).getTime();
+      result = result.filter((wo) => {
+        const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+        const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+        return woStart <= filterEndMs && woEnd >= filterStartMs;
+      });
+    }
+
+    return result;
+  }
+
+  clearDateFilter(): void {
+    this.filterStartDate.set(null);
+    this.filterEndDate.set(null);
   }
 
   onBarFocus(workOrder: WorkOrderDocument): void {

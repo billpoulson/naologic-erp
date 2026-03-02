@@ -65,17 +65,17 @@ describe('TimelineRangeService', () => {
       expect(afterEnd).toBeGreaterThan(beforeEnd);
     });
 
-    it('should extend by chunk only (no minEndDate jump)', () => {
+    it('should extend by pre-allocation amount (24 months for month zoom)', () => {
       service.initialize('month');
       const before = service.dateRange()!;
       const beforeEnd = before.end.getTime();
-      const chunkMs = 30 * 24 * 60 * 60 * 1000; // ~1 month in ms
 
       service.extendForward('month');
       const after = service.dateRange()!;
 
       expect(after.end.getTime()).toBeGreaterThan(beforeEnd);
-      expect(after.end.getTime()).toBeLessThanOrEqual(beforeEnd + chunkMs + 86400000);
+      const addedMs = after.end.getTime() - beforeEnd;
+      expect(addedMs).toBeGreaterThan(20 * 30 * 24 * 60 * 60 * 1000); // ~20+ months
     });
   });
 
@@ -120,9 +120,10 @@ describe('TimelineRangeService', () => {
   });
 
   describe('getExtendChunkDays', () => {
-    it('should return chunk size for zoom level', () => {
-      expect(service.getExtendChunkDays('month')).toBe(1);
-      expect(service.getExtendChunkDays('day')).toBe(7);
+    it('should return pre-allocation amount as approximate days', () => {
+      expect(service.getExtendChunkDays('month')).toBe(720); // 24 months × 30 days
+      expect(service.getExtendChunkDays('day')).toBe(90);
+      expect(service.getExtendChunkDays('hours')).toBe(2); // 48 hours
     });
   });
 });

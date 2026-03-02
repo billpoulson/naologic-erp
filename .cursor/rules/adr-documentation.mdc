@@ -1,0 +1,56 @@
+---
+description: CRITICAL - ADRs require matching Cursor rules; key decisions documented in docs
+alwaysApply: true
+---
+
+# Architecture Decision Records (ADRs)
+
+Key decisions must be documented as **Architecture Decision Records (ADRs)** in the `docs/` folder.
+
+## CRITICAL: ADR + Cursor Rule Pairing
+
+**When adding an ADR, you MUST also create a Cursor rule to reinforce it.** ([ADR-003](docs/adr/003-adr-requires-cursor-rule.md))
+
+- Every ADR must have a corresponding rule in `.cursor/rules/`
+- The rule encodes the decision so the AI applies it during development
+- Without a rule, the ADR is documentation only—the rule ensures it is followed
+
+## When to Create an ADR
+
+Create an ADR when making decisions about:
+
+- Architecture, design, or technical approach
+- Technology or library choices
+- Significant patterns or conventions
+- Trade-offs with lasting impact
+
+## ADR Location and Format
+
+- **Location**: `docs/adr/` (e.g. `docs/adr/0001-use-react-for-frontend.md`)
+- **Naming**: Sequential number + short slug (e.g. `0001-use-react-for-frontend.md`)
+
+## ADR Template
+
+```markdown
+# ADR-XXXX: [Title]
+
+## Status
+Proposed | Accepted | Deprecated | Superseded by [ADR-YYYY]
+
+## Context
+What is the issue we're facing?
+
+## Decision
+What did we decide?
+
+## Consequences
+What are the implications (positive and negative)?
+```
+
+## Workflow
+
+When proposing or implementing a key decision:
+
+1. Create or update the corresponding ADR in `docs/adr/`
+2. **Create or update a Cursor rule** in `.cursor/rules/` that reinforces the ADR
+3. Reference the ADR in related code or docs when relevant

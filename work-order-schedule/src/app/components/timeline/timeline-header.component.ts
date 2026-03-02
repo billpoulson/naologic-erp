@@ -11,12 +11,6 @@ import type { ZoomLevel } from '../../services/timeline-calculator.service';
           {{ label }}
         </div>
       }
-      @if (todayPosition() >= 0) {
-        <div
-          class="timeline-header-today"
-          [style.left.px]="todayPosition()"
-        ></div>
-      }
     </div>
   `,
   styles: [
@@ -46,14 +40,6 @@ import type { ZoomLevel } from '../../services/timeline-calculator.service';
         text-align: center;
       }
 
-      .timeline-header-today {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: $color-status-open;
-        pointer-events: none;
-      }
     `,
   ],
 })
@@ -61,5 +47,4 @@ export class TimelineHeaderComponent {
   labels = input<string[]>([]);
   width = input<number>(0);
   cellWidth = input<number>(100);
-  todayPosition = input<number>(-1);
 }

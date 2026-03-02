@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Generates 10 years of sample data for 100 work centers.
+ * Generates sample data for 1000 work centers.
+ * Work orders span 10 years past to 24 months future from today.
  * Outputs: public/data/work-centers.json, public/data/work-orders.json
  *
  * Usage: node scripts/generate-sample-data.js
@@ -18,9 +19,11 @@ const STARGATE_NAMES = [
   'Gate Assembly',
 ];
 
-const NUM_WORK_CENTERS = 100;
-const SPAN_YEARS = 10;
-const ORDERS_PER_CENTER = 8; // ~1 order per 1.25 years per center
+const NUM_WORK_CENTERS = 1000;
+const PAST_YEARS = 10; // Years of past work
+const FUTURE_MONTHS = 24; // Months of future work from today
+// ~24 orders per center to fill 12-year span (avg 6 months per order)
+const ORDERS_PER_CENTER = 25;
 
 /** Simple seeded random for reproducible data */
 function seededRandom(seed) {
@@ -45,8 +48,8 @@ function generateWorkCenters() {
 function generateWorkOrders(centers) {
   const orders = [];
   const now = new Date();
-  const startYear = now.getFullYear() - Math.floor(SPAN_YEARS / 2);
-  const endYear = startYear + SPAN_YEARS;
+  const startDate = new Date(now.getFullYear() - PAST_YEARS, now.getMonth(), 1);
+  const endDate = new Date(now.getFullYear(), now.getMonth() + FUTURE_MONTHS, 0);
 
   let woId = 1;
   for (const center of centers) {
@@ -54,19 +57,21 @@ function generateWorkOrders(centers) {
     const seedBase = wcNum * 1000;
 
     // Sequential orders: each starts after the previous ends (one active job at a time)
-    let currentStart = new Date(startYear, 0, 1);
+    let currentStart = new Date(startDate);
 
     for (let o = 0; o < ORDERS_PER_CENTER; o++) {
       const seed = seedBase + o;
       const durationMonths = Math.floor(seededRandom(seed + 2) * 8) + 2; // 2–10 months
 
-      const startDate = new Date(currentStart);
-      const endDate = new Date(currentStart.getFullYear(), currentStart.getMonth() + durationMonths, 15);
+      const woStart = new Date(currentStart);
+      const woEnd = new Date(currentStart.getFullYear(), currentStart.getMonth() + durationMonths, 15);
 
-      if (endDate.getFullYear() > endYear) break;
+      if (woEnd.getTime() > endDate.getTime()) break;
 
-      const statusIndex = Math.floor(seededRandom(seed + 3) * STATUSES.length);
-      const status = STATUSES[statusIndex];
+      const status =
+        woStart.getTime() > now.getTime()
+          ? 'open'
+          : STATUSES[Math.floor(seededRandom(seed + 3) * STATUSES.length)];
 
       const orderTypes = [
         'Production run',
@@ -90,13 +95,13 @@ function generateWorkOrders(centers) {
           name,
           workCenterId: center.docId,
           status,
-          startDate: formatDate(startDate),
-          endDate: formatDate(endDate),
+          startDate: formatDate(woStart),
+          endDate: formatDate(woEnd),
         },
       });
 
       // Next order starts day after this one ends
-      currentStart = new Date(endDate);
+      currentStart = new Date(woEnd);
       currentStart.setDate(currentStart.getDate() + 1);
     }
   }

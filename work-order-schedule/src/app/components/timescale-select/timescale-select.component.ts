@@ -19,6 +19,9 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
         <button
           type="button"
           class="timescale-trigger"
+          [attr.aria-expanded]="open()"
+          [attr.aria-haspopup]="'listbox'"
+          aria-label="Timescale"
           (click)="open.set(!open())"
           (blur)="onBlur()"
         >
@@ -30,11 +33,13 @@ const OPTIONS: { value: ZoomLevel; label: string }[] = [
           </span>
         </button>
         @if (open()) {
-          <div class="timescale-menu">
+          <div class="timescale-menu" role="listbox" aria-label="Timescale options">
             @for (opt of options; track opt.value) {
               <button
                 type="button"
                 class="timescale-option"
+                role="option"
+                [attr.aria-selected]="opt.value === level()"
                 [class.selected]="opt.value === level()"
                 (mousedown)="select(opt.value)"
               >

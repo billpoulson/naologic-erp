@@ -1,0 +1,24 @@
+---
+description: Prefer @ path alias for imports instead of relative paths
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# Path Alias Imports
+
+Prefer `@` path alias for imports (e.g. `@app`, `@shared`, `@core`) instead of relative paths.
+
+## Examples
+
+```typescript
+// ❌ Avoid
+import { WorkOrderService } from '../../../core/services/work-order.service';
+
+// ✅ Prefer
+import { WorkOrderService } from '@app/core/services/work-order.service';
+```
+
+## When to Use
+
+- Importing from modules, services, or shared code
+- Avoid relative paths like `../../../` when an alias is available

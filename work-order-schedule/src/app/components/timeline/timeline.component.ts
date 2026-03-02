@@ -13,6 +13,7 @@ import {
   OnDestroy,
   NgZone,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { TimelineCalculatorService, type ZoomLevel } from '../../services/timeline-calculator.service';
 import { TimelineRangeService } from '../../services/timeline-range.service';
 import { TimelinePanService } from '../../services/timeline-pan.service';
@@ -22,49 +23,53 @@ import type { WorkOrderDocument } from '../../models/work-order';
 import { TimelineHeaderComponent } from './timeline-header.component';
 import { TimelineRowComponent } from './timeline-row.component';
 import { TimelineAnnotationComponent } from './timeline-annotation.component';
+import { FormsModule } from '@angular/forms';
 import { TimelineWheelZoomDirective } from '../../directives/timeline-wheel-zoom.directive';
 import { TimelineDebugTooltipDirective } from '../../directives/timeline-debug-tooltip.directive';
 
 const SCROLL_EXTEND_THRESHOLD = 150;
 const DRAG_THRESHOLD_PX = 5;
+/** Max work centers to render at a time (sliding window) */
+const MAX_WORK_CENTERS = 50;
+/** Row height in px */
+const ROW_HEIGHT_PX = 48;
+/** Header height in px (work center header + annotation spacer) */
+const HEADER_HEIGHT_PX = 44;
 
 @Component({
   selector: 'app-timeline',
   standalone: true,
   imports: [
+    CommonModule,
     TimelineHeaderComponent,
     TimelineRowComponent,
     TimelineAnnotationComponent,
+    FormsModule,
     TimelineWheelZoomDirective,
     TimelineDebugTooltipDirective,
   ],
   template: `
     <div class="timeline">
       <div class="timeline-grid">
-        <div class="timeline-left">
-          <div class="timeline-left-header"><span>Work Center</span></div>
-          <div class="timeline-annotation-spacer"></div>
-          @for (wc of workCenters(); track wc.docId) {
-            <div
-              class="timeline-left-cell"
-              [class.hovered]="hoveredWorkCenterId() === wc.docId"
-              (mouseenter)="hoveredWorkCenterId.set(wc.docId)"
-              (mouseleave)="hoveredWorkCenterId.set(null)"
-            ><span>{{ wc.data.name }}</span></div>
-          }
-          <div class="timeline-left-filler"></div>
-        </div>
         <div
-          class="timeline-right"
+          class="timeline-scroll"
           #timelineScroll
+          tabindex="0"
+          role="region"
+          aria-label="Work order timeline. Use arrow keys to navigate between work orders."
           appTimelineWheelZoom
           appTimelineDebugTooltip
-          [class.dragging]="isDragging"
+          [class.dragging]="isPressed || isDragging"
           (scroll)="onScroll($event)"
           (mousedown)="onMouseDown($event)"
+          (keydown)="onKeydown($event)"
         >
-          <div class="timeline-scroll-content" [style.width.px]="timelineWidth()">
-            <div class="timeline-scale-grid" [style.width.px]="timelineWidth()">
+          <div
+            class="timeline-content"
+            [style.min-width.px]="380 + timelineWidth()"
+            [style.min-height.px]="HEADER_HEIGHT_PX + (filteredWorkCenters().length + (loading() ? 1 : 0)) * ROW_HEIGHT_PX"
+          >
+            <div class="timeline-scale-grid" [style.width.px]="timelineWidth()" [style.left.px]="380">
               @for (pos of scaleBoundaryPositions(); track pos) {
                 <div class="scale-boundary" [style.left.px]="pos"></div>
               }
@@ -75,45 +80,133 @@ const DRAG_THRESHOLD_PX = 5;
                 ></div>
               }
             </div>
-            <app-timeline-header
-              [labels]="headerLabels()"
-              [width]="timelineWidth()"
-              [cellWidth]="cellWidth()"
-              [todayPosition]="todayPosition()"
-            />
-            <div class="timeline-annotation-row" [style.width.px]="timelineWidth()">
-              <app-timeline-annotation
-                [dateRange]="dateRange()"
-                [timelineWidth]="timelineWidth()"
-                [cellWidth]="cellWidth()"
-              />
-              @for (pos of scaleBoundaryPositions(); track pos) {
-                <div class="scale-boundary" [style.left.px]="pos"></div>
-              }
-              @if (currentUnitBoundaryPosition() !== null) {
-                <div
-                  class="scale-boundary-current"
-                  [style.left.px]="currentUnitBoundaryPosition()!"
-                ></div>
-              }
+            <div class="timeline-header-row">
+              <div class="timeline-left-header-wrapper">
+                <div class="timeline-left-header">
+                  <span>Work Center</span>
+                  <button
+                    #filterBtn
+                    type="button"
+                    class="timeline-filter-btn"
+                    [class.active]="filterOpen()"
+                    [attr.aria-expanded]="filterOpen()"
+                    [attr.aria-haspopup]="'dialog'"
+                    aria-label="Filter work centers"
+                    (click)="toggleFilter()"
+                    title="Filter work centers"
+                  >
+                    <span aria-hidden="true">⋯</span>
+                  </button>
+                  @if (filterOpen()) {
+                    <div
+                      class="filter-dropdown-backdrop"
+                      (click)="filterOpen.set(false)"
+                    ></div>
+                    <div
+                      class="filter-dropdown"
+                      [style.top.px]="filterDropdownTop()"
+                      [style.left.px]="filterDropdownLeft()"
+                    >
+                      <div class="filter-dropdown-row">
+                        <input
+                          type="text"
+                          class="timeline-filter-input"
+                          placeholder="Filter by name..."
+                          aria-label="Filter work centers by name"
+                          [ngModel]="filterQuery()"
+                          (ngModelChange)="filterQuery.set($event)"
+                          (click)="$event.stopPropagation()"
+                        />
+                        <button
+                          type="button"
+                          class="filter-clear-btn"
+                          [class.visible]="filterQuery().length > 0"
+                          aria-label="Clear filter"
+                          (click)="filterQuery.set(''); $event.stopPropagation()"
+                          title="Clear filter"
+                        >
+                          <span aria-hidden="true">×</span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+                <div class="timeline-left-annotation-spacer"></div>
+              </div>
+              <div class="timeline-right-header" [style.width.px]="timelineWidth()">
+                <app-timeline-header
+                  [labels]="headerLabels()"
+                  [width]="timelineWidth()"
+                  [cellWidth]="cellWidth()"
+                />
+                <div class="timeline-annotation-row">
+                  <app-timeline-annotation
+                    [dateRange]="dateRange()"
+                    [timelineWidth]="timelineWidth()"
+                    [cellWidth]="cellWidth()"
+                  />
+                  @for (pos of scaleBoundaryPositions(); track pos) {
+                    <div class="scale-boundary" [style.left.px]="pos"></div>
+                  }
+                  @if (currentUnitBoundaryPosition() !== null) {
+                    <div
+                      class="scale-boundary-current"
+                      [style.left.px]="currentUnitBoundaryPosition()!"
+                    ></div>
+                  }
+                </div>
+              </div>
             </div>
-            <div class="timeline-rows" [style.width.px]="timelineWidth()">
-            @for (wc of workCenters(); track wc.docId) {
-              <app-timeline-row
-                [workCenter]="wc"
-                [isHoveredFromCell]="hoveredWorkCenterId() === wc.docId"
-                [workOrders]="getOrdersForCenter(wc.docId)"
-                [rangeStart]="dateRange().start"
-                [rangeEnd]="dateRange().end"
-                [timelineWidth]="timelineWidth()"
-                [scrollState]="scrollState()"
-                [zoomLevel]="zoomLevel()"
-                (createRequest)="createRequest.emit($event)"
-                (editRequest)="editRequest.emit($event)"
-                (deleteRequest)="deleteRequest.emit($event)"
-                (hoverChange)="hoveredWorkCenterId.set($event)"
-              />
-            }
+            <div
+              class="timeline-rows-container"
+              [style.height.px]="(filteredWorkCenters().length + (loading() ? 1 : 0)) * ROW_HEIGHT_PX"
+            >
+              @for (item of visibleWorkCenters(); track item.workCenter.docId) {
+                <div
+                  class="timeline-body-row"
+                  [class.timeline-body-row-last]="item.rowIndex === filteredWorkCenters().length - 1"
+                  [style.top.px]="item.rowIndex * ROW_HEIGHT_PX"
+                >
+                  <div
+                    class="timeline-left-cell"
+                    [class.hovered]="hoveredWorkCenterId() === item.workCenter.docId"
+                    (mouseenter)="hoveredWorkCenterId.set(item.workCenter.docId)"
+                    (mouseleave)="hoveredWorkCenterId.set(null)"
+                  ><span>{{ item.workCenter.data.name }}</span></div>
+                  <div class="timeline-right-cell" [style.width.px]="timelineWidth()">
+                    <app-timeline-row
+                      [workCenter]="item.workCenter"
+                      [focusedWorkOrderId]="focusedWorkOrderId()"
+                      [isHoveredFromCell]="hoveredWorkCenterId() === item.workCenter.docId"
+                      [workOrders]="getOrdersForCenter(item.workCenter.docId)"
+                      [rangeStart]="dateRange().start"
+                      [rangeEnd]="dateRange().end"
+                      [timelineWidth]="timelineWidth()"
+                      [todayPosition]="todayPosition()"
+                      [scaleBoundaryPositions]="scaleBoundaryPositions()"
+                      [scrollState]="scrollState()"
+                      [zoomLevel]="zoomLevel()"
+                      (createRequest)="createRequest.emit($event)"
+                      (editRequest)="editRequest.emit($event)"
+                      (deleteRequest)="deleteRequest.emit($event)"
+                      (focusRequest)="onBarFocus($event)"
+                      (hoverChange)="hoveredWorkCenterId.set($event)"
+                    />
+                  </div>
+                </div>
+              }
+              @if (loading()) {
+                <div
+                  class="timeline-loading-row"
+                  [style.top.px]="filteredWorkCenters().length * ROW_HEIGHT_PX"
+                >
+                  <div class="timeline-loading-cell">
+                    <span class="timeline-loading-spinner"></span>
+                    <span class="timeline-loading-text">Loading...</span>
+                  </div>
+                  <div class="timeline-loading-right" [style.width.px]="timelineWidth()"></div>
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -139,95 +232,40 @@ const DRAG_THRESHOLD_PX = 5;
         border-left: 1px solid rgba(230, 235, 240, 1);
       }
 
-      .timeline-left {
-        width: 380px;
-        flex-shrink: 0;
+      .timeline-scroll {
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
         position: relative;
-        z-index: 1;
+        background-color: rgba(247, 249, 252, 1);
+        cursor: grab;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        &.dragging {
+          cursor: grabbing;
+          user-select: none;
+
+          .timeline-row,
+          .work-order-bar {
+            cursor: grabbing;
+          }
+        }
+      }
+
+      .timeline-content {
+        position: relative;
         display: flex;
         flex-direction: column;
-      }
-
-      .timeline-left-filler {
-        flex: 1;
-        min-height: 0;
-        background-color: rgba(255, 255, 255, 1);
-        border-right: 1px solid rgba(230, 235, 240, 1);
-      }
-
-      .timeline-left-header {
-        height: 33px;
-        min-height: 33px;
-        padding: 8px 0 8px 31px;
-        background-color: rgba(255, 255, 255, 1);
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        color: rgba(104, 113, 150, 1);
-        text-align: left;
-        border-bottom: 1px solid rgba(230, 235, 240, 1);
-        border-right: 1px solid rgba(230, 235, 240, 1);
-      }
-
-      .timeline-left-header span {
-        width: 86px;
-        height: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-      }
-
-      .timeline-annotation-spacer {
-        height: 11px;
-        min-height: 11px;
-        flex-shrink: 0;
-        border-right: 1px solid rgba(230, 235, 240, 1);
-      }
-
-      .timeline-left-cell {
-        width: 380px;
-        height: 48px;
-        min-height: 48px;
-        padding: 16px 0 16px 31px;
-        display: flex;
-        align-items: center;
-        background-color: rgba(255, 255, 255, 1);
-        transition: background-color 0.15s ease;
-        border-right: 1px solid rgba(230, 235, 240, 1);
-      }
-
-      .timeline-left-cell {
-        border-bottom: 1px solid rgba(230, 235, 240, 1);
-      }
-
-      .timeline-left-cell:hover,
-      .timeline-left-cell.hovered {
-        background-color: rgba(247, 249, 252, 1);
-      }
-
-      .timeline-left-cell span {
-        height: 16px;
-        color: rgba(3, 9, 41, 1);
-        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-      }
-
-      .timeline-scroll-content {
-        position: relative;
-        min-width: min-content;
-        min-height: 100%;
       }
 
       .timeline-scale-grid {
         position: absolute;
         top: 0;
-        left: 0;
         bottom: 0;
         min-height: 100vh;
         pointer-events: none;
@@ -251,26 +289,154 @@ const DRAG_THRESHOLD_PX = 5;
         z-index: 1;
       }
 
-      .timeline-right {
-        flex: 1;
-        min-width: 0;
-        position: relative;
-        z-index: 2;
-        overflow-x: auto;
-        overflow-y: auto;
-        background-color: rgba(247, 249, 252, 1);
-        cursor: grab;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+      .timeline-header-row {
+        display: flex;
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: rgba(255, 255, 255, 1);
+      }
 
-        &::-webkit-scrollbar {
-          display: none;
-        }
+      .timeline-left-header-wrapper {
+        width: 380px;
+        min-width: 380px;
+        flex-shrink: 0;
+        position: sticky;
+        left: 0;
+        z-index: 11;
+        display: flex;
+        flex-direction: column;
+      }
 
-        &.dragging {
-          cursor: grabbing;
-          user-select: none;
-        }
+      .timeline-left-header {
+        flex-shrink: 0;
+        height: 33px;
+        min-height: 33px;
+        padding: 8px 0 8px 31px;
+        background-color: rgba(255, 255, 255, 1);
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(104, 113, 150, 1);
+        text-align: left;
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
+        border-right: 1px solid rgba(230, 235, 240, 1);
+      }
+
+      .timeline-left-header {
+        gap: 8px;
+      }
+
+      .timeline-left-header span {
+        width: 86px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .timeline-filter-btn {
+        margin-left: auto;
+        margin-right: 12px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 16px;
+        line-height: 1;
+        color: rgba(104, 113, 150, 0.7);
+        border-radius: 4px;
+      }
+
+      .timeline-filter-btn:hover,
+      .timeline-filter-btn.active {
+        color: rgba(104, 113, 150, 1);
+        background: rgba(230, 235, 240, 0.5);
+      }
+
+      .filter-dropdown-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+      }
+
+      .filter-dropdown {
+        position: fixed;
+        z-index: 1000;
+        padding: 8px;
+        background: rgba(255, 255, 255, 1);
+        border: 1px solid rgba(230, 235, 240, 1);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      }
+
+      .filter-dropdown-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .filter-clear-btn {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        background: rgba(230, 235, 240, 0.5);
+        color: rgba(104, 113, 150, 0.6);
+        border-radius: 4px;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .filter-clear-btn.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .filter-clear-btn:hover {
+        background: rgba(230, 235, 240, 1);
+        color: rgba(104, 113, 150, 1);
+      }
+
+      .timeline-filter-input {
+        width: 180px;
+        padding: 6px 10px;
+        font-size: 13px;
+        border: 1px solid rgba(230, 235, 240, 1);
+        border-radius: 6px;
+        font-family: inherit;
+      }
+
+      .timeline-filter-input:focus {
+        outline: none;
+        border-color: rgba(104, 113, 150, 0.5);
+      }
+
+      .timeline-filter-input::placeholder {
+        color: rgba(104, 113, 150, 0.5);
+      }
+
+      .timeline-left-annotation-spacer {
+        height: 11px;
+        min-height: 11px;
+        flex-shrink: 0;
+        background-color: rgba(255, 255, 255, 1);
+        border-right: 1px solid rgba(230, 235, 240, 1);
+      }
+
+      .timeline-right-header {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background-color: rgba(255, 255, 255, 1);
       }
 
       .timeline-annotation-row {
@@ -282,8 +448,111 @@ const DRAG_THRESHOLD_PX = 5;
         background-color: rgba(247, 249, 252, 1);
       }
 
-      .timeline-rows {
-        min-width: min-content;
+      .timeline-rows-container {
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .timeline-body-row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-shrink: 0;
+        height: 48px;
+      }
+
+      .timeline-body-row-last {
+        margin-bottom: 48px;
+      }
+
+      .timeline-loading-row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        display: flex;
+        height: 48px;
+        min-height: 48px;
+        background-color: rgba(247, 249, 252, 1);
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
+      }
+
+      .timeline-loading-cell {
+        width: 380px;
+        min-width: 380px;
+        flex-shrink: 0;
+        padding: 0 31px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: rgba(255, 255, 255, 1);
+        border-right: 1px solid rgba(230, 235, 240, 1);
+        color: rgba(104, 113, 150, 1);
+        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
+        font-size: 14px;
+      }
+
+      .timeline-loading-spinner {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(230, 235, 240, 1);
+        border-top-color: rgba(104, 113, 150, 0.6);
+        border-radius: 50%;
+        animation: timeline-spin 0.7s linear infinite;
+      }
+
+      @keyframes timeline-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .timeline-loading-text {
+        opacity: 0.85;
+      }
+
+      .timeline-loading-right {
+        flex-shrink: 0;
+        background-color: rgba(247, 249, 252, 1);
+      }
+
+      .timeline-left-cell {
+        width: 380px;
+        min-width: 380px;
+        flex-shrink: 0;
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        height: 48px;
+        min-height: 48px;
+        padding: 16px 0 16px 31px;
+        display: flex;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 1);
+        transition: background-color 0.15s ease;
+        border-right: 1px solid rgba(230, 235, 240, 1);
+        border-bottom: 1px solid rgba(230, 235, 240, 1);
+      }
+
+      .timeline-left-cell:hover,
+      .timeline-left-cell.hovered {
+        background-color: rgba(247, 249, 252, 1);
+      }
+
+      .timeline-left-cell span {
+        height: 16px;
+        color: rgba(3, 9, 41, 1);
+        font-family: CircularStd-Regular, 'Circular-Std', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+      }
+
+      .timeline-right-cell {
+        flex-shrink: 0;
+        background-color: rgba(247, 249, 252, 1);
       }
     `,
   ],
@@ -291,11 +560,15 @@ const DRAG_THRESHOLD_PX = 5;
 export class TimelineComponent implements AfterViewInit, OnDestroy {
   workCenters = input.required<WorkCenterDocument[]>();
   workOrders = input.required<WorkOrderDocument[]>();
+  loading = input<boolean>(false);
   zoomLevel = input<ZoomLevel>('month');
 
   createRequest = output<{ date: Date; workCenterId: string }>();
   editRequest = output<WorkOrderDocument>();
   deleteRequest = output<WorkOrderDocument>();
+
+  protected readonly HEADER_HEIGHT_PX = HEADER_HEIGHT_PX;
+  protected readonly ROW_HEIGHT_PX = ROW_HEIGHT_PX;
 
   dateRange = computed(() => {
     const range = this.rangeService.dateRange();
@@ -357,13 +630,49 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     return Math.round(pos);
   });
 
+  filterQuery = signal('');
+
+  /** Work centers after applying text filter */
+  filteredWorkCenters = computed(() => {
+    const centers = this.workCenters();
+    const query = this.filterQuery().trim().toLowerCase();
+    if (!query) return centers;
+    return centers.filter((wc) => wc.data.name.toLowerCase().includes(query));
+  });
+
+  /** Visible work centers (max 50) based on scroll position - sliding window */
+  visibleWorkCenters = computed(() => {
+    const { scrollTop, viewportHeight } = this.scrollState();
+    const centers = this.filteredWorkCenters();
+    if (centers.length === 0) return [];
+
+    const firstRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT_PX) - 2);
+    const count = Math.min(MAX_WORK_CENTERS, centers.length - firstRow);
+    return centers.slice(firstRow, firstRow + count).map((wc, i) => ({
+      workCenter: wc,
+      rowIndex: firstRow + i,
+    }));
+  });
+
   @ViewChild('timelineScroll') scrollContainerRef?: ElementRef<HTMLElement>;
+  @ViewChild('filterBtn') filterBtnRef?: ElementRef<HTMLButtonElement>;
 
   protected hoveredWorkCenterId = signal<string | null>(null);
-  /** Scroll state for off-screen bar detection: { scrollLeft, viewportWidth } */
-  scrollState = signal<{ scrollLeft: number; viewportWidth: number }>({
+  focusedWorkOrderId = signal<string | null>(null);
+  filterOpen = signal(false);
+  filterDropdownTop = signal(0);
+  filterDropdownLeft = signal(0);
+  /** Scroll state: horizontal for bar detection, vertical for work order windowing */
+  scrollState = signal<{
+    scrollLeft: number;
+    viewportWidth: number;
+    scrollTop: number;
+    viewportHeight: number;
+  }>({
     scrollLeft: 0,
     viewportWidth: 0,
+    scrollTop: 0,
+    viewportHeight: 0,
   });
   private extendingBackward = false;
   private extendingForward = false;
@@ -371,6 +680,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   private dragStartScrollLeft: number | null = null;
   private scrollContainer: HTMLElement | null = null;
   protected isDragging = false;
+  protected isPressed = false;
   private initialScrollSet = false;
 
   private readonly panService = inject(TimelinePanService);
@@ -391,6 +701,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       const zoom = this.zoomLevel();
       if (zoom !== 'day' && zoom !== 'hours') return;
       setTimeout(() => this.scrollToShowNow(), 0);
+    });
+    effect(() => {
+      const id = this.focusedWorkOrderId();
+      if (!id) return;
+      const exists = this.workOrders().some((wo) => wo.docId === id);
+      if (!exists) this.focusedWorkOrderId.set(null);
     });
   }
 
@@ -414,9 +730,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     const scrollEl = this.scrollContainerRef?.nativeElement;
     if (!scrollEl) return;
     const viewportWidth = scrollEl.clientWidth;
+    const viewportHeight = scrollEl.clientHeight;
     this.scrollState.set({
       scrollLeft: scrollEl.scrollLeft,
       viewportWidth,
+      scrollTop: scrollEl.scrollTop,
+      viewportHeight,
     });
     if (viewportWidth > 0) {
       this.rangeService.setViewportWidth(viewportWidth);
@@ -508,6 +827,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.dragStartX = event.clientX;
     this.dragStartScrollLeft = this.scrollContainer.scrollLeft;
     this.isDragging = false;
+    this.isPressed = true;
   }
 
   @HostListener('document:mousemove', ['$event'])
@@ -523,6 +843,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       this.scrollState.set({
         scrollLeft: this.scrollContainer.scrollLeft,
         viewportWidth: this.scrollContainer.clientWidth,
+        scrollTop: this.scrollContainer.scrollTop,
+        viewportHeight: this.scrollContainer.clientHeight,
       });
       this.checkExtendAtEdges(this.scrollContainer, event);
     }
@@ -534,6 +856,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.dragStartScrollLeft = null;
     this.scrollContainer = null;
     this.isDragging = false;
+    this.isPressed = false;
   }
 
   onScroll(event: Event): void {
@@ -542,6 +865,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.scrollState.set({
       scrollLeft: el.scrollLeft,
       viewportWidth: el.clientWidth,
+      scrollTop: el.scrollTop,
+      viewportHeight: el.clientHeight,
     });
     if (this.extendingBackward || this.extendingForward) return;
     if (this.dragStartX !== null) return;
@@ -656,19 +981,133 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }, 0);
   }
 
+  toggleFilter(): void {
+    const willOpen = !this.filterOpen();
+    this.filterOpen.set(willOpen);
+    if (willOpen) {
+      setTimeout(() => {
+        const btn = this.filterBtnRef?.nativeElement;
+        if (!btn) return;
+        const rect = btn.getBoundingClientRect();
+        this.filterDropdownTop.set(rect.bottom + 4);
+        this.filterDropdownLeft.set(rect.right - 200);
+      }, 0);
+    }
+  }
+
   getOrdersForCenter(workCenterId: string): WorkOrderDocument[] {
     const range = this.dateRange();
+    const orders = this.workOrders();
     if (!range) {
-      return this.workOrders().filter((wo) => wo.data.workCenterId === workCenterId);
+      return orders.filter((wo) => wo.data.workCenterId === workCenterId);
     }
     const rangeStartMs = range.start.getTime();
     const rangeEndMs = range.end.getTime();
-    return this.workOrders().filter((wo) => {
+    return orders.filter((wo) => {
       if (wo.data.workCenterId !== workCenterId) return false;
       const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
       const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
       return woStart < rangeEndMs && woEnd > rangeStartMs;
     });
+  }
+
+  onBarFocus(workOrder: WorkOrderDocument): void {
+    this.focusedWorkOrderId.set(workOrder.docId);
+    this.scrollContainerRef?.nativeElement?.focus();
+  }
+
+  onKeydown(event: KeyboardEvent): void {
+    const key = event.key;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'ArrowUp' && key !== 'ArrowDown') {
+      return;
+    }
+    event.preventDefault();
+
+    const items = this.buildNavItems();
+    if (items.length === 0) return;
+
+    const currentId = this.focusedWorkOrderId();
+    const current = currentId ? items.find((x) => x.docId === currentId) : null;
+
+    let next: (typeof items)[0] | null = null;
+
+    if (key === 'ArrowLeft') {
+      if (current) {
+        const onSameRow = items.filter((x) => x.rowIndex === current.rowIndex && x.centerMs < current.centerMs);
+        next = onSameRow.length > 0 ? onSameRow.reduce((a, b) => (b.centerMs > a.centerMs ? b : a)) : null;
+      } else {
+        next = items.reduce((a, b) => (a.centerMs < b.centerMs ? a : b));
+      }
+    } else if (key === 'ArrowRight') {
+      if (current) {
+        const onSameRow = items.filter((x) => x.rowIndex === current.rowIndex && x.centerMs > current.centerMs);
+        next = onSameRow.length > 0 ? onSameRow.reduce((a, b) => (a.centerMs < b.centerMs ? a : b)) : null;
+      } else {
+        next = items.reduce((a, b) => (a.centerMs > b.centerMs ? a : b));
+      }
+    } else if (key === 'ArrowUp') {
+      if (current) {
+        const above = items.filter((x) => x.rowIndex === current.rowIndex - 1);
+        next = above.length > 0 ? above.reduce((a, b) => (Math.abs(b.centerMs - current.centerMs) < Math.abs(a.centerMs - current.centerMs) ? b : a)) : null;
+      } else {
+        next = items.reduce((a, b) => (a.rowIndex < b.rowIndex ? a : b));
+      }
+    } else if (key === 'ArrowDown') {
+      if (current) {
+        const below = items.filter((x) => x.rowIndex === current.rowIndex + 1);
+        next = below.length > 0 ? below.reduce((a, b) => (Math.abs(b.centerMs - current.centerMs) < Math.abs(a.centerMs - current.centerMs) ? b : a)) : null;
+      } else {
+        next = items.reduce((a, b) => (a.rowIndex > b.rowIndex ? a : b));
+      }
+    }
+
+    if (next) {
+      this.focusedWorkOrderId.set(next.docId);
+      this.scrollFocusedBarIntoView(next.rowIndex);
+    }
+  }
+
+  private buildNavItems(): Array<{ docId: string; workCenterId: string; rowIndex: number; centerMs: number }> {
+    const centers = this.filteredWorkCenters();
+    const orders = this.workOrders();
+    const range = this.dateRange();
+    if (!range || centers.length === 0) return [];
+
+    const rangeStartMs = range.start.getTime();
+    const rangeEndMs = range.end.getTime();
+    const items: Array<{ docId: string; workCenterId: string; rowIndex: number; centerMs: number }> = [];
+
+    for (let i = 0; i < centers.length; i++) {
+      const wcId = centers[i].docId;
+      const woList = orders.filter((wo) => {
+        if (wo.data.workCenterId !== wcId) return false;
+        const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+        const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+        return woStart < rangeEndMs && woEnd > rangeStartMs;
+      });
+      for (const wo of woList) {
+        const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+        const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+        const centerMs = (woStart + woEnd) / 2;
+        items.push({ docId: wo.docId, workCenterId: wcId, rowIndex: i, centerMs });
+      }
+    }
+    return items;
+  }
+
+  private scrollFocusedBarIntoView(rowIndex: number): void {
+    const el = this.scrollContainerRef?.nativeElement;
+    if (!el) return;
+    const rowTop = rowIndex * ROW_HEIGHT_PX;
+    const rowBottom = rowTop + ROW_HEIGHT_PX;
+    const viewTop = el.scrollTop;
+    const viewBottom = el.scrollTop + el.clientHeight;
+
+    if (rowTop < viewTop) {
+      el.scrollTop = Math.max(0, rowTop - 24);
+    } else if (rowBottom > viewBottom) {
+      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, rowBottom - el.clientHeight + 24);
+    }
   }
 
 }

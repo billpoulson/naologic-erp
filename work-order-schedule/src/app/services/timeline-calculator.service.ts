@@ -7,15 +7,28 @@ export interface DateRange {
   end: Date;
 }
 
-/** Years of range to pre-populate on each side of the current date (configurable) */
+/** Years of range to pre-populate on each side for getVisibleDateRange (legacy) */
 export const TIMELINE_RANGE_YEARS = 10;
 
-/** Default window sizes (time units) when viewport is unknown - fills ~2-3 viewport widths */
+/**
+ * Pre-allocated range per zoom level (each side of today).
+ * - month, week: 24 months forward and backward
+ * - day (history): 90 days forward and backward
+ * - hours: 48 hours forward and backward
+ */
+export const PREALLOCATE_UNITS: Record<ZoomLevel, { type: 'months' | 'days' | 'hours'; amount: number }> = {
+  month: { type: 'months', amount: 24 },
+  week: { type: 'months', amount: 24 },
+  day: { type: 'days', amount: 90 },
+  hours: { type: 'hours', amount: 48 },
+};
+
+/** Default window sizes (time units) when viewport is unknown - used as fallback */
 export const DEFAULT_WINDOW_UNITS: Record<ZoomLevel, number> = {
-  hours: 168, // 1 week
-  day: 60, // ~2 months
-  week: 12, // ~3 months
-  month: 12, // 1 year
+  hours: 96, // 48 * 2
+  day: 180, // 90 * 2
+  week: 48, // 24 months
+  month: 48, // 24 months
 };
 
 /** Chunk size for sliding window (same units as zoom level) */
@@ -55,45 +68,48 @@ export class TimelineCalculatorService {
   }
 
   /**
-   * Returns a fixed-size sliding window range centered on today.
-   * Uses viewport width when provided, otherwise DEFAULT_WINDOW_UNITS.
+   * Amount to extend when scrolling near edges. Uses PREALLOCATE_UNITS
+   * so extensions are larger and trigger less frequently.
    */
-  getSlidingWindowRange(zoomLevel: ZoomLevel, viewportPx?: number): DateRange {
+  getExtendChunkAmount(zoomLevel: ZoomLevel): { type: 'months' | 'days' | 'hours'; amount: number } {
+    return PREALLOCATE_UNITS[zoomLevel] ?? PREALLOCATE_UNITS.month;
+  }
+
+  /**
+   * Returns a fixed-size sliding window range centered on today.
+   * Uses PREALLOCATE_UNITS for zoom-level-specific pre-allocation:
+   * - month, week: 24 months forward and backward
+   * - day: 90 days forward and backward
+   * - hours: 48 hours forward and backward
+   */
+  getSlidingWindowRange(zoomLevel: ZoomLevel, _viewportPx?: number): DateRange {
     const now = new Date();
     const today = this.startOfDay(now);
-    const units =
-      viewportPx !== undefined && viewportPx > 0
-        ? this.getWindowUnitsForViewport(viewportPx, zoomLevel)
-        : DEFAULT_WINDOW_UNITS[zoomLevel];
-    const halfUnits = Math.floor(units / 2);
+    const config = PREALLOCATE_UNITS[zoomLevel] ?? PREALLOCATE_UNITS.month;
+    const amount = config.amount;
 
     let start: Date;
     let end: Date;
 
-    switch (zoomLevel) {
+    switch (config.type) {
       case 'hours': {
-        start = new Date(now.getTime() - halfUnits * this.HOUR_MS);
-        end = new Date(now.getTime() + (units - halfUnits) * this.HOUR_MS);
+        start = new Date(now.getTime() - amount * this.HOUR_MS);
+        end = new Date(now.getTime() + amount * this.HOUR_MS);
         break;
       }
-      case 'day': {
-        start = this.addDays(new Date(today), -halfUnits);
-        end = this.addDays(new Date(today), units - halfUnits);
+      case 'days': {
+        start = this.addDays(new Date(today), -amount);
+        end = this.addDays(new Date(today), amount);
         break;
       }
-      case 'week': {
-        start = this.addDays(new Date(today), -halfUnits * 7);
-        end = this.addDays(new Date(today), (units - halfUnits) * 7);
-        break;
-      }
-      case 'month': {
-        start = this.addMonths(new Date(today), -halfUnits);
-        end = this.addMonths(new Date(today), units - halfUnits);
+      case 'months': {
+        start = this.addMonths(new Date(today), -amount);
+        end = this.addMonths(new Date(today), amount);
         break;
       }
       default: {
-        start = this.addMonths(new Date(today), -6);
-        end = this.addMonths(new Date(today), 6);
+        start = this.addMonths(new Date(today), -24);
+        end = this.addMonths(new Date(today), 24);
       }
     }
 

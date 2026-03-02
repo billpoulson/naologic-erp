@@ -123,6 +123,10 @@ describe('WorkOrderService', () => {
 
       const noOverlap = service.checkOverlap('wc-1', '2025-06-15', '2025-06-20');
       expect(noOverlap).toBe(false);
+
+      // Same-day handoff: new order starts the day existing order ends — allowed
+      const sameDayHandoff = service.checkOverlap('wc-1', '2025-06-10', '2025-06-20');
+      expect(sameDayHandoff).toBe(false);
       done();
     });
   });

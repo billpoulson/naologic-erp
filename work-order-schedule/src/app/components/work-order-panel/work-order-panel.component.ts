@@ -1,4 +1,4 @@
-import { Component, input, output, effect, signal, computed } from '@angular/core';
+import { Component, input, output, effect, signal, computed, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -26,18 +26,33 @@ function ngbToDate(ngb: NgbDateStruct): Date {
   return new Date(ngb.year, ngb.month - 1, ngb.day);
 }
 
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
 @Component({
   selector: 'app-work-order-panel',
   standalone: true,
   imports: [ReactiveFormsModule, NgbDatepickerModule, NgSelectModule, CommonModule],
   template: `
     @if (visible() || isClosing()) {
-      <div class="panel-backdrop" [class.closing]="isClosing()" (click)="requestClose()"></div>
-      <div class="panel" [class.closing]="isClosing()">
+      <div class="panel-backdrop" [class.closing]="isClosing()" (click)="requestClose()" aria-hidden="true"></div>
+      <div
+        class="panel"
+        [class.closing]="isClosing()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="panel-title"
+        aria-describedby="panel-desc"
+        (keydown)="onPanelKeydown($event)"
+        #panelEl
+      >
         <div class="panel-header">
           <div class="panel-header-content">
-            <h2>Work Order Details</h2>
-            <p class="panel-subtitle">Specify the dates, name and status for this order.</p>
+            <h2 id="panel-title">Work Order Details</h2>
+            <p id="panel-desc" class="panel-subtitle">Specify the dates, name and status for this order.</p>
           </div>
           <div class="panel-header-actions">
             <button type="button" class="btn btn-cancel" (click)="requestClose()">
@@ -51,20 +66,24 @@ function ngbToDate(ngb: NgbDateStruct): Date {
         <div class="panel-header-border"></div>
         <form id="panel-form" [formGroup]="form" (ngSubmit)="onSubmit()">
           <div class="form-group">
-            <label>Work Order Name</label>
+            <label for="panel-name">Work Order Name</label>
             <input
+              id="panel-name"
               type="text"
               formControlName="name"
               placeholder="Acme Inc."
               class="form-control"
+              [attr.aria-invalid]="form.get('name')?.invalid && form.get('name')?.touched"
+              [attr.aria-describedby]="(form.get('name')?.invalid && form.get('name')?.touched) ? 'panel-name-error' : null"
             />
             @if (form.get('name')?.invalid && form.get('name')?.touched) {
-              <span class="error">Required</span>
+              <span id="panel-name-error" class="error" role="alert">Required</span>
             }
           </div>
           <div class="form-group">
-            <label>Status</label>
+            <label for="panel-status">Status</label>
             <ng-select
+              id="panel-status"
               formControlName="status"
               [items]="statusOptions"
               bindLabel="label"
@@ -73,6 +92,7 @@ function ngbToDate(ngb: NgbDateStruct): Date {
               [searchable]="false"
               placeholder=""
               class="status-select"
+              aria-label="Status"
             >
               <ng-template ng-label-tmp let-item="item">
                 @if (item) {
@@ -89,29 +109,33 @@ function ngbToDate(ngb: NgbDateStruct): Date {
             </ng-select>
           </div>
           <div class="form-group">
-            <label>Start Date</label>
+            <label for="panel-start-date">Start Date</label>
             <input
+              id="panel-start-date"
               class="form-control"
               placeholder="DD.MM.YYYY"
               ngbDatepicker
               #dpStart="ngbDatepicker"
               (click)="dpStart.toggle()"
               formControlName="startDate"
+              aria-label="Start date"
             />
           </div>
           <div class="form-group">
-            <label>End Date</label>
+            <label for="panel-end-date">End Date</label>
             <input
+              id="panel-end-date"
               class="form-control"
               placeholder="DD.MM.YYYY"
               ngbDatepicker
               #dpEnd="ngbDatepicker"
               (click)="dpEnd.toggle()"
               formControlName="endDate"
+              aria-label="End date"
             />
           </div>
           @if (overlapError()) {
-            <div class="error-message">Work orders cannot overlap on the same work center.</div>
+            <div class="error-message" role="alert" aria-live="polite">Work orders cannot overlap on the same work center.</div>
           }
         </form>
       </div>
@@ -440,7 +464,9 @@ function ngbToDate(ngb: NgbDateStruct): Date {
     `,
   ],
 })
-export class WorkOrderPanelComponent {
+export class WorkOrderPanelComponent implements AfterViewChecked {
+  @ViewChild('panelEl') panelEl?: ElementRef<HTMLElement>;
+
   visible = input<boolean>(false);
   mode = input<'create' | 'edit'>('create');
   workOrder = input<WorkOrderDocument | null>(null);
@@ -454,6 +480,7 @@ export class WorkOrderPanelComponent {
   statusOptions = STATUS_OPTIONS;
   overlapError = signal(false);
   isClosing = signal(false);
+  private focusPending = false;
 
   constructor(
     private fb: FormBuilder,
@@ -472,6 +499,7 @@ export class WorkOrderPanelComponent {
     effect(() => {
       if (this.visible()) {
         this.overlapError.set(false);
+        this.focusPending = true;
         if (this.mode() === 'edit' && this.workOrder()) {
           const wo = this.workOrder()!;
           this.form.patchValue({
@@ -481,11 +509,14 @@ export class WorkOrderPanelComponent {
             endDate: dateToNgb(new Date(wo.data.endDate)),
           });
         } else {
+          const initDate = this.initialDate();
+          const start = initDate ? dateToNgb(initDate) : null;
+          const end = initDate ? dateToNgb(addDays(initDate, 7)) : null;
           this.form.patchValue({
             name: '',
             status: 'open',
-            startDate: null,
-            endDate: null,
+            startDate: start,
+            endDate: end,
           });
         }
       }
@@ -506,7 +537,8 @@ export class WorkOrderPanelComponent {
       ? this.workOrder()!.data.workCenterId
       : this.workCenterId()!;
 
-    const excludeDocId = this.mode() === 'edit' ? this.workOrder()!.docId : undefined;
+    // Exclude the existing record when editing so it doesn't collide with itself
+    const excludeDocId = this.workOrder()?.docId;
     const overlap = this.workOrderService.checkOverlap(
       workCenterId,
       start.toISOString().slice(0, 10),
@@ -527,6 +559,21 @@ export class WorkOrderPanelComponent {
       endDate: end.toISOString().slice(0, 10),
     });
     this.requestClose();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.focusPending && this.visible() && this.panelEl) {
+      this.focusPending = false;
+      const firstInput = this.panelEl.nativeElement.querySelector<HTMLInputElement>('#panel-name');
+      firstInput?.focus();
+    }
+  }
+
+  onPanelKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.requestClose();
+    }
   }
 
   requestClose(): void {

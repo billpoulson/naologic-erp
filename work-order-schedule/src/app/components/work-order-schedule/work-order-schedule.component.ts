@@ -1,6 +1,8 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { WorkOrderService } from '../../services/work-order.service';
 import { ZoomLevelService } from '../../services/zoom-level.service';
+import { TimelineRangeService } from '../../services/timeline-range.service';
+import { TimelineCalculatorService } from '../../services/timeline-calculator.service';
 import { TimelineComponent } from '../timeline/timeline.component';
 import { WorkOrderPanelComponent } from '../work-order-panel/work-order-panel.component';
 import type { WorkCenterDocument } from '../../models/work-center';
@@ -12,14 +14,21 @@ import type { WorkOrderDocument } from '../../models/work-order';
   imports: [TimelineComponent, WorkOrderPanelComponent],
   template: `
     <div class="work-order-schedule">
-      <app-timeline
-        [workCenters]="displayedWorkCenters()"
-        [workOrders]="workOrders()"
-        [zoomLevel]="zoomService.level()"
-        (createRequest)="onCreateRequest($event)"
-        (editRequest)="onEditRequest($event)"
-        (deleteRequest)="onDeleteRequest($event)"
-      />
+      <div
+        class="timeline-fade-wrapper"
+        [class.loaded]="dataLoaded()"
+        [class.loading]="loading()"
+      >
+        <app-timeline
+          [workCenters]="workCenters()"
+          [workOrders]="workOrdersInRange()"
+          [loading]="loading()"
+          [zoomLevel]="zoomService.level()"
+          (createRequest)="onCreateRequest($event)"
+          (editRequest)="onEditRequest($event)"
+          (deleteRequest)="onDeleteRequest($event)"
+        />
+      </div>
       <app-work-order-panel
         [visible]="panelVisible()"
         [mode]="panelMode()"
@@ -37,14 +46,46 @@ import type { WorkOrderDocument } from '../../models/work-order';
         height: 100%;
         overflow: hidden;
       }
+
+      .timeline-fade-wrapper {
+        height: 100%;
+        opacity: 0;
+        transition: opacity 0.35s ease-in;
+      }
+
+      .timeline-fade-wrapper.loaded,
+      .timeline-fade-wrapper.loading {
+        opacity: 1;
+      }
     `,
   ],
 })
 export class WorkOrderScheduleComponent {
   zoomService = inject(ZoomLevelService);
+  rangeService = inject(TimelineRangeService);
+  calculator = inject(TimelineCalculatorService);
   workCenters = signal<WorkCenterDocument[]>([]);
-  displayedWorkCenters = computed(() => this.workCenters().slice(0, 6));
   workOrders = signal<WorkOrderDocument[]>([]);
+  loading = signal(false);
+
+  /** True when work centers (and thus timeline structure) have loaded */
+  dataLoaded = computed(() => this.workCenters().length > 0);
+
+  /** Work orders that overlap the current timeline window - only these are passed to the timeline */
+  workOrdersInRange = computed(() => {
+    const orders = this.workOrders();
+    const range =
+      this.rangeService.dateRange() ??
+      this.calculator.getSlidingWindowRange(this.zoomService.level());
+    const startMs = range.start.getTime();
+    const endMs = range.end.getTime();
+    return orders.filter((wo) => {
+      const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+      const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+      return woStart < endMs && woEnd > startMs;
+    });
+  });
+
   panelVisible = signal(false);
   panelMode = signal<'create' | 'edit'>('create');
   selectedWorkOrder = signal<WorkOrderDocument | null>(null);
@@ -53,6 +94,7 @@ export class WorkOrderScheduleComponent {
   constructor(private workOrderService: WorkOrderService) {
     this.workOrderService.workCenters.subscribe((c) => this.workCenters.set(c));
     this.workOrderService.workOrders.subscribe((o) => this.workOrders.set(o));
+    this.workOrderService.loading.subscribe((loading) => this.loading.set(loading));
   }
 
   onCreateRequest(event: { date: Date; workCenterId: string }): void {

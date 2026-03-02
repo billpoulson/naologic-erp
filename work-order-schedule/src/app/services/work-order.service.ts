@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, catchError, of, tap } from 'rxjs';
+import { BehaviorSubject, catchError, of, tap, finalize, combineLatest, map } from 'rxjs';
 import type { WorkCenterDocument } from '../models/work-center';
 import type { WorkOrderDocument } from '../models/work-order';
 import { FALLBACK_WORK_CENTERS, FALLBACK_WORK_ORDERS } from '../data/sample-data';
+import { TimelineCalculatorService } from './timeline-calculator.service';
 
 const STORAGE_KEY = 'work-order-schedule:work-orders';
 
@@ -13,9 +14,19 @@ const STORAGE_KEY = 'work-order-schedule:work-orders';
 export class WorkOrderService {
   private workCentersSubject = new BehaviorSubject<WorkCenterDocument[]>([]);
   private workOrdersSubject = new BehaviorSubject<WorkOrderDocument[]>([]);
+  private loadingWorkCentersSubject = new BehaviorSubject<boolean>(true);
+  private loadingWorkOrdersSubject = new BehaviorSubject<boolean>(true);
+  private readonly calculator = inject(TimelineCalculatorService);
 
   workCenters = this.workCentersSubject.asObservable();
   workOrders = this.workOrdersSubject.asObservable();
+  loadingWorkCenters = this.loadingWorkCentersSubject.asObservable();
+  loadingWorkOrders = this.loadingWorkOrdersSubject.asObservable();
+  /** True when loading work centers or work orders */
+  loading = combineLatest([
+    this.loadingWorkCentersSubject,
+    this.loadingWorkOrdersSubject,
+  ]).pipe(map(([lc, lo]) => lc || lo));
 
   constructor(private http: HttpClient) {
     this.loadData();
@@ -35,7 +46,8 @@ export class WorkOrderService {
       .get<WorkCenterDocument[]>('data/work-centers.json')
       .pipe(
         catchError(() => of(FALLBACK_WORK_CENTERS)),
-        tap((centers) => this.workCentersSubject.next(centers))
+        tap((centers) => this.workCentersSubject.next(centers)),
+        finalize(() => this.loadingWorkCentersSubject.next(false))
       )
       .subscribe();
 
@@ -53,6 +65,7 @@ export class WorkOrderService {
         const parsed = JSON.parse(stored) as WorkOrderDocument[];
         if (Array.isArray(parsed)) {
           this.workOrdersSubject.next(parsed);
+          this.loadingWorkOrdersSubject.next(false);
           return;
         }
       } catch {
@@ -73,7 +86,8 @@ export class WorkOrderService {
         tap((orders) => {
           this.workOrdersSubject.next(orders);
           this.persistWorkOrders(orders);
-        })
+        }),
+        finalize(() => this.loadingWorkOrdersSubject.next(false))
       )
       .subscribe();
   }
@@ -101,6 +115,20 @@ export class WorkOrderService {
     return this.workOrdersSubject.value.filter(
       (wo) => wo.data.workCenterId === workCenterId
     );
+  }
+
+  /**
+   * Returns work orders that overlap the given date range.
+   * Use when loading data for the timeline to avoid passing orders outside the visible window.
+   */
+  getWorkOrdersInRange(rangeStart: Date, rangeEnd: Date): WorkOrderDocument[] {
+    const startMs = rangeStart.getTime();
+    const endMs = rangeEnd.getTime();
+    return this.workOrdersSubject.value.filter((wo) => {
+      const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+      const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+      return woStart < endMs && woEnd > startMs;
+    });
   }
 
   createWorkOrder(order: WorkOrderDocument['data']): WorkOrderDocument {
@@ -131,21 +159,32 @@ export class WorkOrderService {
     this.persistWorkOrders(orders);
   }
 
+  /**
+   * Returns true if the given date range overlaps another work order at the same work center.
+   * Same-day handoff is allowed: a work order may start on the day another finishes.
+   */
   checkOverlap(
     workCenterId: string,
     startDate: string,
     endDate: string,
     excludeDocId?: string
   ): boolean {
-    const start = new Date(startDate).getTime();
-    const end = new Date(endDate).getTime();
+    const start = this.calculator.parseLocalDate(startDate).getTime();
+    const endExclusive = this.calculator.parseLocalDate(endDate);
+    endExclusive.setDate(endExclusive.getDate() + 1);
+    const end = endExclusive.getTime();
 
     const overlapping = this.workOrdersSubject.value.some((wo) => {
       if (wo.data.workCenterId !== workCenterId) return false;
       if (excludeDocId && wo.docId === excludeDocId) return false;
 
-      const woStart = new Date(wo.data.startDate).getTime();
-      const woEnd = new Date(wo.data.endDate).getTime();
+      // Same-day handoff: new order starts the day existing order ends — allowed
+      if (startDate === wo.data.endDate) return false;
+
+      const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+      const woEndDate = this.calculator.parseLocalDate(wo.data.endDate);
+      woEndDate.setDate(woEndDate.getDate() + 1);
+      const woEnd = woEndDate.getTime();
 
       return start < woEnd && end > woStart;
     });

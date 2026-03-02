@@ -37,6 +37,15 @@ $circular-std-url: 'https://naologic-com-assets.naologic.com/fonts/circular-std'
   font-family: 'Circular-Std', sans-serif;
 }
 
+/* WCAG 2.4.7 Focus Visible - visible focus indicator for keyboard users */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(104, 113, 150, 0.8);
+  outline-offset: 2px;
+}
+
 html,
 body {
   height: 100%;

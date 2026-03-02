@@ -5,8 +5,8 @@ import type { ZoomLevel } from '../services/timeline-calculator.service';
 const ZOOM_ORDER: ZoomLevel[] = ['month', 'week', 'day', 'hours'];
 
 /**
- * Handles wheel events for timeline zoom. Uses addEventListener with passive: false
- * so preventDefault works.
+ * Handles Ctrl+wheel for timeline zoom. Plain wheel scrolls vertically.
+ * Uses addEventListener with passive: false so preventDefault works when zooming.
  * See ADR-004.
  */
 @Directive({
@@ -33,6 +33,7 @@ export class TimelineWheelZoomDirective implements OnInit, OnDestroy {
   }
 
   private onWheel(event: WheelEvent): void {
+    if (!event.ctrlKey) return;
     event.preventDefault();
     const delta = event.deltaY;
     const current = this.zoomService.level();

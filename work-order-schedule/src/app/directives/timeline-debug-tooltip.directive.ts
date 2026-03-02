@@ -9,6 +9,9 @@ import { TimelineCalculatorService, type ZoomLevel } from '../services/timeline-
 import { TimelineRangeService } from '../services/timeline-range.service';
 import { ZoomLevelService } from '../services/zoom-level.service';
 
+/** Left offset of the timeline grid (work center column width) - must match timeline.component */
+const TIMELINE_LEFT_OFFSET_PX = 380;
+
 /**
  * Debug directive: shows a tooltip with the date/time under the cursor
  * based on the selected timescale. Apply to the timeline scroll container.
@@ -37,9 +40,10 @@ export class TimelineDebugTooltipDirective implements OnDestroy {
     const host = this.el.nativeElement;
     const rect = host.getBoundingClientRect();
     const contentX = event.clientX - rect.left + host.scrollLeft;
+    const timelineX = Math.max(0, Math.min(width, contentX - TIMELINE_LEFT_OFFSET_PX));
 
     const date = this.calculator.positionToDate(
-      contentX,
+      timelineX,
       range.start,
       range.end,
       width

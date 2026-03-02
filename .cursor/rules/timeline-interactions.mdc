@@ -1,0 +1,12 @@
+---
+description: Timeline interaction patterns (ADR-004)
+globs: ['**/timeline/**', '**/work-order-schedule/**']
+---
+
+# Timeline Interaction Patterns
+
+Follow [ADR-004](docs/adr/004-timeline-interaction-patterns.md) for timeline UX:
+
+- **No scrollbar** – Hide scrollbar on timeline; use CSS `scrollbar-width: none`
+- **Drag to pan** – Click-and-drag on timeline to pan; use movement threshold to distinguish from row click
+- **Scroll wheel zoom** – Ctrl + wheel cycles zoom level (month ↔ week ↔ day); plain wheel scrolls vertically

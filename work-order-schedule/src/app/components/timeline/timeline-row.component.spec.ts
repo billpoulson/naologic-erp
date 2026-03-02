@@ -92,11 +92,13 @@ describe('TimelineRowComponent', () => {
         rangeEnd,
         timelineWidth
       );
-      const expectedWidth = Math.max(40, Math.round(expectedRight - expectedLeft));
+      const rawWidth = Math.max(40, Math.round(expectedRight - expectedLeft));
+      const expectedLeftWithGap = Math.round(expectedLeft) + 4;
+      const expectedWidthWithGap = Math.max(32, rawWidth - 8);
 
-      expect(Math.abs(left - expectedLeft)).toBeLessThan(2);
-      expect(Math.abs(width - expectedWidth)).toBeLessThan(2);
-      expect(width).toBeGreaterThanOrEqual(40);
+      expect(Math.abs(left - expectedLeftWithGap)).toBeLessThan(2);
+      expect(Math.abs(width - expectedWidthWithGap)).toBeLessThan(2);
+      expect(width).toBeGreaterThanOrEqual(32);
     });
 
     it('should use parseLocalDate for correct positioning (avoid timezone shift)', () => {
@@ -123,10 +125,11 @@ describe('TimelineRowComponent', () => {
         rangeEnd,
         timelineWidth
       );
-      expect(Math.abs(left - expectedLeft)).toBeLessThan(2);
-      expect(Math.abs(width - Math.max(40, Math.round(expectedRight - expectedLeft)))).toBeLessThan(
-        2
-      );
+      const rawWidth = Math.max(40, Math.round(expectedRight - expectedLeft));
+      const expectedLeftWithGap = Math.round(expectedLeft) + 4;
+      const expectedWidthWithGap = Math.max(32, rawWidth - 8);
+      expect(Math.abs(left - expectedLeftWithGap)).toBeLessThan(2);
+      expect(Math.abs(width - expectedWidthWithGap)).toBeLessThan(2);
     });
 
     it('should position multiple bars correctly', () => {
@@ -147,7 +150,7 @@ describe('TimelineRowComponent', () => {
       expect(left2).toBeGreaterThan(left1);
     });
 
-    it('should enforce minimum width of 40px', () => {
+    it('should enforce minimum width of 32px (with 8px gap between bars)', () => {
       const orders = [createWorkOrder({ startDate: '2025-02-01', endDate: '2025-02-02' })];
       fixture.componentRef.setInput('workOrders', orders);
       fixture.detectChanges();
@@ -155,7 +158,7 @@ describe('TimelineRowComponent', () => {
       const barHost = fixture.nativeElement.querySelector('app-work-order-bar');
       const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
       const width = parseInt(bar.style.width || '0', 10);
-      expect(width).toBeGreaterThanOrEqual(40);
+      expect(width).toBeGreaterThanOrEqual(32);
     });
 
     it('should align single-day work order to day column width in day view', () => {
@@ -193,11 +196,13 @@ describe('TimelineRowComponent', () => {
         rangeEnd,
         timelineWidth
       );
-      const expectedWidth = Math.max(40, Math.round(expectedRight - expectedLeft));
+      const rawWidth = Math.max(40, Math.round(expectedRight - expectedLeft));
+      const expectedLeftWithGap = Math.round(expectedLeft) + 4;
+      const expectedWidthWithGap = Math.max(32, rawWidth - 8);
 
-      expect(Math.abs(left - expectedLeft)).toBeLessThan(2);
-      expect(Math.abs(width - expectedWidth)).toBeLessThan(2);
-      expect(left).toBe(colWidth);
+      expect(Math.abs(left - expectedLeftWithGap)).toBeLessThan(2);
+      expect(Math.abs(width - expectedWidthWithGap)).toBeLessThan(2);
+      expect(left).toBe(colWidth + 4);
     });
 
     it('should align work order to timeline scale for any zoom level', () => {
@@ -219,7 +224,7 @@ describe('TimelineRowComponent', () => {
       const bar = barHost?.querySelector('.work-order-bar') as HTMLElement;
       const left = parseInt(bar.style.left || '0', 10);
 
-      expect(left).toBe(0);
+      expect(left).toBe(4);
     });
 
     it('should clamp bar and set continuesLeft when work order starts before range', () => {
@@ -240,7 +245,7 @@ describe('TimelineRowComponent', () => {
       expect(bar?.classList.contains('continues-left')).toBe(true);
       expect(bar?.classList.contains('continues-right')).toBe(false);
       const left = parseInt(bar.style.left || '0', 10);
-      expect(left).toBe(0);
+      expect(left).toBe(4);
     });
 
     it('should clamp bar and set continuesRight when work order ends after range', () => {
@@ -262,7 +267,7 @@ describe('TimelineRowComponent', () => {
       expect(bar?.classList.contains('continues-right')).toBe(true);
       const left = parseInt(bar.style.left || '0', 10);
       const width = parseInt(bar.style.width || '0', 10);
-      expect(left + width).toBe(timelineWidth);
+      expect(left + width).toBe(timelineWidth - 4);
     });
 
     it('should set both continuesLeft and continuesRight when work order spans full range', () => {

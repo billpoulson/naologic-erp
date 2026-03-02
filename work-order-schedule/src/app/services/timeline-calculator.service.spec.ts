@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   TimelineCalculatorService,
   TIMELINE_RANGE_YEARS,
-  DEFAULT_WINDOW_UNITS,
+  PREALLOCATE_UNITS,
   SLIDE_CHUNK_UNITS,
   type ZoomLevel,
 } from './timeline-calculator.service';
@@ -278,22 +278,36 @@ describe('TimelineCalculatorService', () => {
   });
 
   describe('getSlidingWindowRange', () => {
-    it('should return fixed-size window centered on today for month zoom', () => {
+    it('should return 24 months each side for month zoom', () => {
       const range = service.getSlidingWindowRange('month');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const halfMonths = Math.floor(DEFAULT_WINDOW_UNITS.month / 2);
-      const expectedStart = service.addMonths(new Date(today), -halfMonths);
-      const expectedEnd = service.addMonths(new Date(today), DEFAULT_WINDOW_UNITS.month - halfMonths);
+      const months = PREALLOCATE_UNITS.month.amount;
+      const expectedStart = service.addMonths(new Date(today), -months);
+      const expectedEnd = service.addMonths(new Date(today), months);
       expect(range.start.getTime()).toBe(expectedStart.getTime());
       expect(range.end.getTime()).toBe(expectedEnd.getTime());
     });
 
-    it('should use viewport when provided', () => {
-      const range = service.getSlidingWindowRange('month', 1200);
-      const durationMs = range.end.getTime() - range.start.getTime();
-      const expectedMonths = Math.ceil((1200 * 2.5) / 113);
-      expect(durationMs).toBeGreaterThan(0);
+    it('should return 90 days each side for day zoom', () => {
+      const range = service.getSlidingWindowRange('day');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const days = PREALLOCATE_UNITS.day.amount;
+      const expectedStart = service.addDays(new Date(today), -days);
+      const expectedEnd = service.addDays(new Date(today), days);
+      expect(range.start.getTime()).toBe(expectedStart.getTime());
+      expect(range.end.getTime()).toBe(expectedEnd.getTime());
+    });
+
+    it('should return 48 hours each side for hours zoom', () => {
+      const range = service.getSlidingWindowRange('hours');
+      const now = new Date();
+      const hours = PREALLOCATE_UNITS.hours.amount;
+      const expectedStart = new Date(now.getTime() - hours * 60 * 60 * 1000);
+      const expectedEnd = new Date(now.getTime() + hours * 60 * 60 * 1000);
+      expect(range.start.getTime()).toBe(expectedStart.getTime());
+      expect(range.end.getTime()).toBe(expectedEnd.getTime());
     });
   });
 

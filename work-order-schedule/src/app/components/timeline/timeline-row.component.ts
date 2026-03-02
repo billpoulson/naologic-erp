@@ -26,15 +26,26 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
         [style.width.px]="timelineWidth()"
         [style.min-width.px]="timelineWidth()"
       >
+        @for (pos of scaleBoundaryPositions(); track pos) {
+          <div class="scale-boundary" [style.left.px]="pos"></div>
+        }
+        @if (todayPosition() >= 0) {
+          <div
+            class="timeline-row-today"
+            [style.left.px]="todayPosition()"
+          ></div>
+        }
         @for (bar of barPositions(); track bar.workOrder.docId) {
           <app-work-order-bar
             [workOrder]="bar.workOrder"
+            [focused]="focusedWorkOrderId() === bar.workOrder.docId"
             [left]="bar.left"
             [width]="bar.width"
             [continuesLeft]="bar.continuesLeft"
             [continuesRight]="bar.continuesRight"
             (edit)="editRequest.emit($event)"
             (delete)="deleteRequest.emit($event)"
+            (focusRequest)="focusRequest.emit($event)"
           />
         }
         @if ((hovered() || isHoveredFromCell()) && showClickHint()) {
@@ -42,6 +53,7 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
             class="click-hint-bar"
             [style.left.px]="clickHintLeft()"
             [style.width.px]="clickHintWidth"
+            aria-hidden="true"
           >
             <span class="click-hint-tooltip">Click to add dates</span>
           </div>
@@ -57,7 +69,7 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
         display: flex;
         height: 48px;
         min-height: 48px;
-        cursor: pointer;
+        cursor: grab;
         background-color: rgba(247, 249, 252, 1);
         transition: background-color 0.15s ease;
       }
@@ -74,6 +86,26 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
         margin: 0;
         padding: 0;
         overflow: visible;
+      }
+
+      .scale-boundary {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: rgba(230, 235, 240, 1);
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .timeline-row-today {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        border-left: 3px solid rgba(212, 215, 255, 1);
+        z-index: 0;
+        pointer-events: none;
       }
 
       .click-hint-bar {
@@ -171,11 +203,14 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
 })
 export class TimelineRowComponent {
   workCenter = input.required<WorkCenterDocument>();
+  focusedWorkOrderId = input<string | null>(null);
   isHoveredFromCell = input<boolean>(false);
   workOrders = input<WorkOrderDocument[]>([]);
   rangeStart = input.required<Date>();
   rangeEnd = input.required<Date>();
   timelineWidth = input.required<number>();
+  todayPosition = input<number>(-1);
+  scaleBoundaryPositions = input<number[]>([]);
   scrollState = input<{ scrollLeft: number; viewportWidth: number }>({
     scrollLeft: 0,
     viewportWidth: 0,
@@ -185,6 +220,7 @@ export class TimelineRowComponent {
   createRequest = output<{ date: Date; workCenterId: string }>();
   editRequest = output<WorkOrderDocument>();
   deleteRequest = output<WorkOrderDocument>();
+  focusRequest = output<WorkOrderDocument>();
   hoverChange = output<string | null>();
 
   hovered = signal(false);
@@ -301,10 +337,12 @@ export class TimelineRowComponent {
       const visibleLeft = Math.max(0, left);
       const visibleRight = Math.min(width, right);
       const barWidth = Math.max(40, Math.round(visibleRight - visibleLeft));
+      const gapInset = 4;
+      const minBarWidth = 32;
       return {
         workOrder: wo,
-        left: Math.round(visibleLeft),
-        width: barWidth,
+        left: Math.round(visibleLeft) + gapInset,
+        width: Math.max(minBarWidth, barWidth - 2 * gapInset),
         continuesLeft: left < 0,
         continuesRight: right > width,
       };
@@ -327,7 +365,8 @@ export class TimelineRowComponent {
     const content = row.querySelector('.timeline-row-content') as HTMLElement;
     if (!content) return;
     const rect = content.getBoundingClientRect();
-    const x = event.clientX - rect.left;
+    const { scrollLeft } = this.scrollState();
+    const x = event.clientX - rect.left + scrollLeft;
     this.hoverX.set(x);
   }
 
@@ -344,7 +383,8 @@ export class TimelineRowComponent {
     if (!content) return;
 
     const rect = content.getBoundingClientRect();
-    const x = event.clientX - rect.left + content.scrollLeft;
+    const { scrollLeft } = this.scrollState();
+    const x = event.clientX - rect.left + scrollLeft;
     const date = this.calculator.positionToDate(
       x,
       this.rangeStart(),

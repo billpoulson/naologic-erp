@@ -15,27 +15,35 @@ test.describe('User Documentation', () => {
   test('capture timeline overview and timescale views', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Work Orders' })).toBeVisible();
+    await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '01-timeline-overview.png') });
 
-    await page.getByRole('combobox').selectOption('week');
+    const trigger = page.getByRole('button', { name: 'Timescale' });
+    await trigger.click();
+    await page.getByRole('option', { name: 'Week' }).click();
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '02-timeline-week-view.png') });
 
-    await page.getByRole('combobox').selectOption('day');
+    await trigger.click();
+    await page.getByRole('option', { name: 'Day' }).click();
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '03-timeline-day-view.png') });
 
-    await page.getByRole('combobox').selectOption('month');
+    await trigger.click();
+    await page.getByRole('option', { name: 'Month' }).click();
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '04-timeline-month-view.png') });
   });
 
   test('capture create work order workflow', async ({ page }) => {
     await page.goto('/');
-    await page.locator('.timeline-row').last().click({ position: { x: 300, y: 22 } });
-    await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
+    await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
+    await page.locator('.timeline-row').first().click({ position: { x: 5000, y: 22 }, force: true });
+    await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible({ timeout: 5000 });
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '05-create-panel-open.png') });
 
     await page.getByPlaceholder('Acme Inc.').fill('Sample Work Order');
+    await page.getByLabel('Start date').fill('01.01.2030');
+    await page.getByLabel('End date').fill('07.01.2030');
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '06-create-form-filled.png') });
 
     await page.getByRole('button', { name: 'Create' }).click();
@@ -47,15 +55,17 @@ test.describe('User Documentation', () => {
 
   test('capture edit work order workflow', async ({ page }) => {
     await page.goto('/');
-    const packagingBar = page.locator('.timeline-row').last().locator('.work-order-bar').first();
-    await packagingBar.scrollIntoViewIfNeeded();
-    await packagingBar.hover();
+    await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
+    const firstRowWithBar = page.locator('.timeline-row').filter({ has: page.locator('.work-order-bar') }).first();
+    const bar = firstRowWithBar.locator('.work-order-bar').first();
+    await bar.scrollIntoViewIfNeeded();
+    await bar.hover();
     await page.waitForSelector('.bar-menu-btn', { state: 'visible', timeout: 5000 });
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '08-bar-hover-menu.png') });
 
-    await packagingBar.locator('.bar-menu-btn').click();
-    await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+    await bar.locator('.bar-menu-btn').click({ force: true });
+    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '09-bar-dropdown-edit-delete.png') });
 
@@ -69,10 +79,11 @@ test.describe('User Documentation', () => {
 
   test('capture overlap validation workflow', async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
     await page.locator('.timeline-row').first().click({ position: { x: 300, y: 22 } });
     await page.getByPlaceholder('Acme Inc.').fill('Overlapping Order');
-    await page.locator('input[formcontrolname="startDate"]').fill('2025-02-05');
-    await page.locator('input[formcontrolname="endDate"]').fill('2025-02-15');
+    await page.getByLabel('Start date').fill('01.05.2016');
+    await page.getByLabel('End date').fill('01.06.2016');
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '11-overlap-form-filled.png') });
 
@@ -84,7 +95,7 @@ test.describe('User Documentation', () => {
 
   test('capture cancel workflow', async ({ page }) => {
     await page.goto('/');
-    await page.locator('.timeline-row').last().click({ position: { x: 300, y: 22 } });
+    await page.locator('.timeline-row').last().click({ position: { x: 300, y: 22 }, force: true });
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '13-cancel-panel-open.png') });

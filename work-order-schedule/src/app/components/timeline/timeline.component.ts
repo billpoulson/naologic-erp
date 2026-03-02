@@ -110,6 +110,7 @@ const HEADER_HEIGHT_PX = 44;
                       [style.left.px]="filterDropdownLeft()"
                     >
                       <div class="filter-dropdown-row">
+                        <label class="filter-date-label">Name</label>
                         <input
                           type="text"
                           class="timeline-filter-input"
@@ -405,62 +406,62 @@ const HEADER_HEIGHT_PX = 44;
       .filter-dropdown {
         position: fixed;
         z-index: 1000;
-        padding: 8px;
-        min-width: 304px;
+        padding: 6px;
+        min-width: 280px;
         background: rgba(255, 255, 255, 1);
         border: 1px solid rgba(230, 235, 240, 1);
-        border-radius: 8px;
+        border-radius: 6px;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
       }
 
       .filter-dropdown-row {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .filter-date-row {
-        margin-top: 8px;
-        padding-top: 8px;
+        margin-top: 6px;
+        padding-top: 6px;
         border-top: 1px solid rgba(230, 235, 240, 1);
       }
 
       .filter-date-label {
         flex-shrink: 0;
-        width: 70px;
-        font-size: 12px;
+        width: 58px;
+        font-size: 11px;
         color: rgba(104, 113, 150, 1);
       }
 
       .filter-date-inputs {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
         flex: 1;
         min-width: 0;
       }
 
       .filter-date-input {
         flex: 1;
-        min-width: 90px;
+        min-width: 78px;
       }
 
       .filter-date-sep {
         flex-shrink: 0;
         color: rgba(104, 113, 150, 0.7);
-        font-size: 12px;
+        font-size: 11px;
       }
 
       .filter-clear-btn {
         flex-shrink: 0;
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
         padding: 0;
         border: none;
         background: rgba(230, 235, 240, 0.5);
         color: rgba(104, 113, 150, 0.6);
         border-radius: 4px;
-        font-size: 18px;
+        font-size: 16px;
         line-height: 1;
         cursor: pointer;
         opacity: 0;
@@ -478,9 +479,10 @@ const HEADER_HEIGHT_PX = 44;
       }
 
       .timeline-filter-input {
-        width: 180px;
-        padding: 6px 10px;
-        font-size: 13px;
+        flex: 1;
+        min-width: 0;
+        padding: 5px 8px;
+        font-size: 12px;
         border: 1px solid rgba(230, 235, 240, 1);
         border-radius: 6px;
         font-family: inherit;
@@ -1088,7 +1090,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         if (!btn) return;
         const rect = btn.getBoundingClientRect();
         this.filterDropdownTop.set(rect.bottom + 4);
-        this.filterDropdownLeft.set(rect.right - 320);
+        this.filterDropdownLeft.set(rect.right - 280);
       }, 0);
     }
   }

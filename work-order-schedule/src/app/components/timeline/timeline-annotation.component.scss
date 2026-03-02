@@ -1,0 +1,26 @@
+@use '../../../styles/variables' as *;
+
+:host {
+  display: block;
+  position: relative;
+  height: 100%;
+}
+
+.current-unit-annotation {
+  position: absolute;
+  top: 0;
+  height: 22px;
+  box-shadow: 0 0 0 1px rgba(222, 224, 255, 1);
+  border-radius: 0 8px 8px 8px;
+  background-color: rgba(214, 216, 255, 1);
+  color: rgba(62, 64, 219, 1);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: CircularStd-Book, 'Circular-Std', sans-serif;
+  white-space: nowrap;
+  min-width: fit-content;
+}

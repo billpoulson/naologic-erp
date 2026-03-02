@@ -1,0 +1,12 @@
+---
+description: Prefer no inline styles; use external CSS/SCSS files (ADR-007)
+alwaysApply: true
+---
+
+# Prefer No Inline Styles
+
+Follow [ADR-007](docs/adr/007-prefer-no-inline-styles.md):
+
+- **Prefer external files** – Use `styleUrls` with a dedicated `.css` or `.scss` file for all component styles. Avoid the `styles` array.
+- **Co-locate** – Place the style file next to the component (e.g. `component-name.component.scss`)
+- **Exception** – Only use inline `styles` when strictly necessary (e.g. dynamic styles, third-party constraints). Document the reason in a comment.

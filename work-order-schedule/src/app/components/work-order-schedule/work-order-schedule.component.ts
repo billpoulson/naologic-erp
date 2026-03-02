@@ -40,25 +40,7 @@ import type { WorkOrderDocument } from '../../models/work-order';
       />
     </div>
   `,
-  styles: [
-    `
-      .work-order-schedule {
-        height: 100%;
-        overflow: hidden;
-      }
-
-      .timeline-fade-wrapper {
-        height: 100%;
-        opacity: 0;
-        transition: opacity 0.35s ease-in;
-      }
-
-      .timeline-fade-wrapper.loaded,
-      .timeline-fade-wrapper.loading {
-        opacity: 1;
-      }
-    `,
-  ],
+  styleUrls: ['./work-order-schedule.component.scss'],
 })
 export class WorkOrderScheduleComponent {
   zoomService = inject(ZoomLevelService);

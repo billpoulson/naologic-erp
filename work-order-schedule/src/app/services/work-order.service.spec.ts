@@ -149,6 +149,78 @@ describe('WorkOrderService', () => {
     });
   });
 
+  describe('checkOverlap excludeDocId (edit: do not check overlap with self)', () => {
+    const ORDERS_TWO_ON_WC1: WorkOrderDocument[] = [
+      {
+        docId: 'wo-1',
+        docType: 'workOrder',
+        data: {
+          name: 'Order 1',
+          workCenterId: 'wc-1',
+          status: 'open',
+          startDate: '2025-06-01',
+          endDate: '2025-06-10',
+        },
+      },
+      {
+        docId: 'wo-2',
+        docType: 'workOrder',
+        data: {
+          name: 'Order 2',
+          workCenterId: 'wc-1',
+          status: 'open',
+          startDate: '2025-06-15',
+          endDate: '2025-06-22',
+        },
+      },
+    ];
+
+    beforeEach(() => {
+      httpMock.expectOne('data/work-centers.json').flush(MOCK_CENTERS);
+      httpMock.expectOne('data/work-orders.json').flush(ORDERS_TWO_ON_WC1);
+    });
+
+    it('should not overlap with self when editing same dates', (done) => {
+      service.workOrders.pipe(take(1)).subscribe(() => {
+        const overlap = service.checkOverlap('wc-1', '2025-06-01', '2025-06-10', 'wo-1');
+        expect(overlap).toBe(false);
+        done();
+      });
+    });
+
+    it('should not overlap with self when editing and changing dates within gap', (done) => {
+      service.workOrders.pipe(take(1)).subscribe(() => {
+        const overlap = service.checkOverlap('wc-1', '2025-06-11', '2025-06-14', 'wo-1');
+        expect(overlap).toBe(false);
+        done();
+      });
+    });
+
+    it('should detect overlap with other order when editing wo-1 to overlap wo-2', (done) => {
+      service.workOrders.pipe(take(1)).subscribe(() => {
+        const overlap = service.checkOverlap('wc-1', '2025-06-05', '2025-06-20', 'wo-1');
+        expect(overlap).toBe(true);
+        done();
+      });
+    });
+
+    it('should not overlap with self when only status changed (same dates)', (done) => {
+      service.workOrders.pipe(take(1)).subscribe(() => {
+        const overlap = service.checkOverlap('wc-1', '2025-06-01', '2025-06-10', 'wo-1');
+        expect(overlap).toBe(false);
+        done();
+      });
+    });
+
+    it('should overlap when create mode (no excludeDocId) with same dates as existing', (done) => {
+      service.workOrders.pipe(take(1)).subscribe(() => {
+        const overlap = service.checkOverlap('wc-1', '2025-06-01', '2025-06-10');
+        expect(overlap).toBe(true);
+        done();
+      });
+    });
+  });
+
   it('should persist work orders to localStorage on create', (done) => {
     flushInitialData();
     service.workOrders.pipe(take(1)).subscribe((orders) => {

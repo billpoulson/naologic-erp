@@ -123,6 +123,21 @@ describe('WorkOrderPanelComponent', () => {
       expect(emitted).toBe(false);
       expect(component.overlapError()).toBe(true);
     });
+
+    it('should not pass excludeDocId when creating (check all orders)', () => {
+      component.form.patchValue({
+        name: 'New Order',
+        startDate: ngb(2025, 6, 20),
+        endDate: ngb(2025, 6, 27),
+      });
+      component.onSubmit();
+      expect(workOrderService.checkOverlap).toHaveBeenCalledWith(
+        'wc-1',
+        '2025-06-20',
+        '2025-06-27',
+        undefined
+      );
+    });
   });
 
   describe('edit mode', () => {
@@ -181,7 +196,7 @@ describe('WorkOrderPanelComponent', () => {
       component.onSubmit();
     });
 
-    it('should exclude current docId when checking overlap', () => {
+    it('should exclude current docId when checking overlap (date change)', () => {
       component.form.patchValue({
         name: 'Same Order',
         startDate: ngb(2025, 6, 1),
@@ -194,6 +209,44 @@ describe('WorkOrderPanelComponent', () => {
         '2025-06-15',
         'wo-1'
       );
+    });
+
+    it('should exclude current docId when only status changes', () => {
+      component.form.patchValue({
+        name: 'Existing Order',
+        status: 'complete',
+        startDate: ngb(2025, 6, 1),
+        endDate: ngb(2025, 6, 15),
+      });
+      component.onSubmit();
+      expect(workOrderService.checkOverlap).toHaveBeenCalledWith(
+        'wc-1',
+        '2025-06-01',
+        '2025-06-15',
+        'wo-1'
+      );
+    });
+
+    it('should emit save when editing same dates (excluded from overlap, no collision with self)', () => {
+      workOrderService.checkOverlap.and.returnValue(false);
+      component.form.patchValue({
+        name: 'Existing Order',
+        status: 'complete',
+        startDate: ngb(2025, 6, 1),
+        endDate: ngb(2025, 6, 15),
+      });
+      let emitted: WorkOrderDocument['data'] | undefined;
+      component.save.subscribe((data) => (emitted = data));
+      component.onSubmit();
+      expect(workOrderService.checkOverlap).toHaveBeenCalledWith(
+        'wc-1',
+        '2025-06-01',
+        '2025-06-15',
+        'wo-1'
+      );
+      expect(emitted).toBeDefined();
+      expect(emitted?.name).toBe('Existing Order');
+      expect(component.overlapError()).toBe(false);
     });
   });
 

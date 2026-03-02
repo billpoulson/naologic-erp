@@ -41,8 +41,18 @@ Use the **Timescale** dropdown to switch between:
 3. **Fill in** the form:
    - **Work Order Name** (required)
    - **Status** (Open, In Progress, Complete, Blocked)
-   - **Start Date** – Click the field to open the date picker
-   - **End Date** – Click the field to open the date picker
+   - **Start Date** – Click the field to open the date picker calendar
+   - **End Date** – Click the field to open the date picker calendar
+
+### Setting Start and End Dates
+
+Click the **Start Date** or **End Date** field to open the date picker. A calendar popup appears where you can select a date. Use the arrow buttons to change the month or year, then click a day to select it.
+
+![Start date picker](screenshots/15-start-date-picker.png)
+
+![End date picker](screenshots/16-end-date-picker.png)
+
+You can also type the date directly in DD.MM.YYYY format (e.g. `01.01.2030`).
 
 ![Create form filled](screenshots/06-create-form-filled.png)
 

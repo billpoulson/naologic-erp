@@ -26,7 +26,6 @@ import { TimelineAnnotationComponent } from './timeline-annotation.component';
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { TimelineWheelZoomDirective } from '../../directives/timeline-wheel-zoom.directive';
-import { TimelineDebugTooltipDirective } from '../../directives/timeline-debug-tooltip.directive';
 
 const SCROLL_EXTEND_THRESHOLD = 150;
 const DRAG_THRESHOLD_PX = 5;
@@ -48,7 +47,6 @@ const HEADER_HEIGHT_PX = 44;
     FormsModule,
     NgbDatepickerModule,
     TimelineWheelZoomDirective,
-    TimelineDebugTooltipDirective,
   ],
   template: `
     <div class="timeline">
@@ -60,7 +58,6 @@ const HEADER_HEIGHT_PX = 44;
           role="region"
           aria-label="Work order timeline. Use arrow keys to navigate between work orders."
           appTimelineWheelZoom
-          appTimelineDebugTooltip
           [class.dragging]="isPressed || isDragging"
           (scroll)="onScroll($event)"
           (mousedown)="onMouseDown($event)"

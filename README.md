@@ -55,6 +55,8 @@ Open [http://localhost:4200](http://localhost:4200) in your browser.
 
 ## User Guide
 
+**[→ Full User Guide with screenshots](work-order-schedule/docs/USER-GUIDE.md)**
+
 ### Changing the Timescale
 
 Use the **Timescale** dropdown (top right) to switch between:

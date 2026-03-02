@@ -216,8 +216,9 @@ export class WorkOrderPanelComponent implements AfterViewChecked {
       ? this.workOrder()!.data.workCenterId
       : this.workCenterId()!;
 
-    // Exclude the existing record when editing so it doesn't collide with itself
-    const excludeDocId = this.workOrder()?.docId;
+    // When editing, exclude the record being edited so it never collides with itself
+    // (whether changing dates, status, name, or any combination)
+    const excludeDocId = this.mode() === 'edit' ? this.workOrder()?.docId : undefined;
     const overlap = this.workOrderService.checkOverlap(
       workCenterId,
       start.toISOString().slice(0, 10),

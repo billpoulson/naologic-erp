@@ -47,6 +47,10 @@
   border-radius: 8px;
   background-color: rgba(255, 252, 241, 1);
   color: $color-status-blocked;
+
+  &.focused {
+    box-shadow: 0 0 0 2px rgba(104, 113, 150, 0.8);
+  }
 }
 
 .bar-name {
@@ -155,7 +159,7 @@
 .bar-dropdown-backdrop {
   position: fixed;
   inset: 0;
-  background: $panel-overlay;
+  background: transparent;
   z-index: 999;
 }
 
@@ -183,6 +187,50 @@
 
 .bar-dropdown button:hover {
   background: $color-bg-secondary;
+}
+
+.bar-dropdown-confirm {
+  min-width: 200px;
+}
+
+.bar-dropdown-confirm-content {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar-dropdown-confirm-message {
+  margin: 0;
+  padding: 0 12px 8px 12px;
+  font-family: CircularStd-Book, 'Circular-Std', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(47, 48, 89, 1);
+}
+
+.bar-dropdown-confirm-option {
+  padding: 5px 0 5px 12px;
+  margin: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: CircularStd-Book, 'Circular-Std', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(47, 48, 89, 1);
+}
+
+.bar-dropdown-confirm-option:hover {
+  background: $color-bg-hover;
+}
+
+.bar-dropdown-confirm-delete {
+  color: #b91c1c;
+}
+
+.bar-dropdown-confirm-delete:hover {
+  background: rgba(254, 226, 226, 1);
 }
 
 .bar-name-tooltip {

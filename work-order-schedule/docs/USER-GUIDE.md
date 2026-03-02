@@ -28,11 +28,23 @@ Use the **Timescale** dropdown to switch between:
 
 ![Month view](screenshots/04-timeline-month-view.png)
 
+### Filtering work centers
+
+Click the **⋯** (ellipsis) button next to "Work Center" to open the filter popover. You can filter by:
+
+- **Name** – Case-insensitive text match on work center name
+- **Date range** – Filter by start date, end date, or both. A work order is shown if any part of its range falls within the filter (overlap):
+  - **Start date only** – Show work orders that end on or after that date
+  - **End date only** – Show work orders that start on or before that date
+  - **Both dates** – Show work orders that overlap the date range
+
 ---
 
 ## Creating a Work Order
 
 1. **Click** on an empty area of a work center row. A hint "Click to add dates" appears when you hover over empty space.
+
+![Click hint on hover](screenshots/05a-click-hint-hover.png)
 
 2. The **Work Order Details** panel opens from the right with the start date pre-filled based on where you clicked.
 
@@ -80,10 +92,26 @@ You can also type the date directly in DD.MM.YYYY format (e.g. `01.01.2030`).
 
 ---
 
+## Keyboard Navigation
+
+You can navigate the timeline and work orders using the keyboard:
+
+1. **Focus the timeline** — Click on the timeline area or tab to it.
+2. **Arrow keys** — Move focus between work order bars (Left/Right on the same row, Up/Down between rows).
+3. **Enter** — Open the focused work order in the details panel.
+4. **Escape** — Close the panel (when open). Focus returns to the timeline so you can continue navigating.
+
+Use **`?empty`** or **`?empty=1`** in the URL to start with an empty timeline when demonstrating the create flow.
+
+---
+
 ## Deleting a Work Order
 
 1. Hover over the work order bar and click the three-dot menu.
-2. Click **Delete**. The work order is removed from the timeline immediately.
+2. Click **Delete** to show a confirmation.
+3. Click **Delete** again to confirm. The work order is removed from the timeline immediately.
+
+![Bar dropdown with Edit and Delete](screenshots/09-bar-dropdown-edit-delete.png)
 
 ---
 
@@ -114,7 +142,10 @@ To close the panel without saving:
 
 ## Persistence and Reset
 
-Work orders are saved automatically and persist across page refreshes. To reset all data and reload from the default sample, add `?reset=1` to the URL (e.g. `http://localhost:4200/?reset=1`).
+Work orders are saved automatically and persist across page refreshes.
+
+- **`?reset=1`** — Clear stored data and reload from the default sample (e.g. `http://localhost:4200/?reset=1`).
+- **`?empty`** or **`?empty=1`** — Clear stored data and start with no work orders (empty timeline). Use this to show the create flow (e.g. `http://localhost:4200/?empty`).
 
 ---
 

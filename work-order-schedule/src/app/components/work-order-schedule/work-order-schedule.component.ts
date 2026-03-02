@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, ViewChild } from '@angular/core';
 import { WorkOrderService } from '../../services/work-order.service';
 import { ZoomLevelService } from '../../services/zoom-level.service';
 import { TimelineRangeService } from '../../services/timeline-range.service';
@@ -20,13 +20,16 @@ import type { WorkOrderDocument } from '../../models/work-order';
         [class.loading]="loading()"
       >
         <app-timeline
+          #timelineRef
           [workCenters]="workCenters()"
           [workOrders]="workOrdersInRange()"
           [loading]="loading()"
           [zoomLevel]="zoomService.level()"
+          [focusedWorkOrderId]="focusedWorkOrderId()"
           (createRequest)="onCreateRequest($event)"
           (editRequest)="onEditRequest($event)"
           (deleteRequest)="onDeleteRequest($event)"
+          (focusChange)="onTimelineFocusChange($event)"
         />
       </div>
       <app-work-order-panel
@@ -43,6 +46,8 @@ import type { WorkOrderDocument } from '../../models/work-order';
   styleUrls: ['./work-order-schedule.component.scss'],
 })
 export class WorkOrderScheduleComponent {
+  @ViewChild('timelineRef') timelineRef?: TimelineComponent;
+
   zoomService = inject(ZoomLevelService);
   rangeService = inject(TimelineRangeService);
   calculator = inject(TimelineCalculatorService);
@@ -72,6 +77,7 @@ export class WorkOrderScheduleComponent {
   panelMode = signal<'create' | 'edit'>('create');
   selectedWorkOrder = signal<WorkOrderDocument | null>(null);
   clickContext = signal<{ date: Date; workCenterId: string } | null>(null);
+  focusedWorkOrderId = signal<string | null>(null);
 
   constructor(private workOrderService: WorkOrderService) {
     this.workOrderService.workCenters.subscribe((c) => this.workCenters.set(c));
@@ -97,15 +103,24 @@ export class WorkOrderScheduleComponent {
     this.workOrderService.deleteWorkOrder(workOrder.docId);
   }
 
+  onTimelineFocusChange(workOrder: WorkOrderDocument | null): void {
+    this.focusedWorkOrderId.set(workOrder?.docId ?? null);
+  }
+
   onPanelClose(): void {
     this.panelVisible.set(false);
     this.selectedWorkOrder.set(null);
     this.clickContext.set(null);
+    // Resume keyboard control on timeline after panel close animation completes
+    setTimeout(() => this.timelineRef?.focusTimeline(), 250);
   }
 
   onPanelSave(data: WorkOrderDocument['data']): void {
     if (this.panelMode() === 'create') {
-      this.workOrderService.createWorkOrder(data);
+      const created = this.workOrderService.createWorkOrder(data);
+      this.rangeService.extendToIncludeDate(new Date(created.data.startDate));
+      this.rangeService.extendToIncludeDate(new Date(created.data.endDate));
+      this.focusedWorkOrderId.set(created.docId);
     } else {
       const wo = this.selectedWorkOrder();
       if (wo) {

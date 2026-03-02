@@ -337,4 +337,74 @@ describe('WorkOrderService', () => {
       });
     });
   });
+
+  describe('when ?empty=1 in querystring', () => {
+    let originalHref: string;
+
+    beforeEach(() => {
+      if (typeof window !== 'undefined') {
+        originalHref = window.location.href;
+        window.history.replaceState(null, '', window.location.pathname + '?empty=1');
+        localStorage.clear();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([{ docId: 'stale', docType: 'workOrder', data: {} }]));
+      }
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [WorkOrderService],
+      });
+      service = TestBed.inject(WorkOrderService);
+      httpMock = TestBed.inject(HttpTestingController);
+    });
+
+    afterEach(() => {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', originalHref);
+      }
+    });
+
+    it('should clear localStorage and load empty work orders', (done) => {
+      httpMock.expectOne('data/work-centers.json').flush(MOCK_CENTERS);
+      service.workOrders.pipe(take(1)).subscribe((orders) => {
+        expect(orders).toEqual([]);
+        expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+        done();
+      });
+    });
+  });
+
+  describe('when ?empty in querystring (no value)', () => {
+    let originalHref: string;
+
+    beforeEach(() => {
+      if (typeof window !== 'undefined') {
+        originalHref = window.location.href;
+        window.history.replaceState(null, '', window.location.pathname + '?empty');
+        localStorage.clear();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([{ docId: 'stale', docType: 'workOrder', data: {} }]));
+      }
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [WorkOrderService],
+      });
+      service = TestBed.inject(WorkOrderService);
+      httpMock = TestBed.inject(HttpTestingController);
+    });
+
+    afterEach(() => {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', originalHref);
+      }
+    });
+
+    it('should clear localStorage and load empty work orders', (done) => {
+      httpMock.expectOne('data/work-centers.json').flush(MOCK_CENTERS);
+      service.workOrders.pipe(take(1)).subscribe((orders) => {
+        expect(orders).toEqual([]);
+        expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+        done();
+      });
+    });
+  });
 });

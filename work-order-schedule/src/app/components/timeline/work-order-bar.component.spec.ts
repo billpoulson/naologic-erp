@@ -54,6 +54,15 @@ describe('WorkOrderBarComponent', () => {
     expect(bar?.classList.contains('status-complete')).toBe(true);
   });
 
+  it('should apply focused class when focused and show focus ring for blocked status', () => {
+    fixture.componentRef.setInput('workOrder', createWorkOrder({ data: { ...createWorkOrder().data, status: 'blocked' } }));
+    fixture.componentRef.setInput('focused', true);
+    fixture.detectChanges();
+    const bar = fixture.nativeElement.querySelector('.work-order-bar');
+    expect(bar?.classList.contains('status-blocked')).toBe(true);
+    expect(bar?.classList.contains('focused')).toBe(true);
+  });
+
   it('should apply continues-left class when continuesLeft is true', () => {
     fixture.componentRef.setInput('continuesLeft', true);
     fixture.detectChanges();
@@ -99,7 +108,7 @@ describe('WorkOrderBarComponent', () => {
       editBtn?.click();
     });
 
-    it('should emit delete when Delete is clicked', (done) => {
+    it('should emit delete when Delete is clicked and confirmed', (done) => {
       const wo = createWorkOrder();
       fixture.componentRef.setInput('workOrder', wo);
       fixture.detectChanges();
@@ -113,8 +122,50 @@ describe('WorkOrderBarComponent', () => {
       component.menuOpen.set(true);
       fixture.detectChanges();
 
-      const buttons = fixture.nativeElement.querySelectorAll('.bar-dropdown button');
-      buttons[1]?.click();
+      const buttons = fixture.nativeElement.querySelectorAll('.bar-dropdown button[role="menuitem"]');
+      (buttons[1] as HTMLElement)?.click();
+      fixture.detectChanges();
+
+      const confirmDeleteBtn = fixture.nativeElement.querySelector('.bar-dropdown-confirm-delete');
+      (confirmDeleteBtn as HTMLElement)?.click();
+    });
+
+    it('should close menu when Cancel is clicked in delete confirmation', () => {
+      component.barHovered.set(true);
+      component.menuOpen.set(true);
+      fixture.detectChanges();
+
+      const deleteBtn = fixture.nativeElement.querySelectorAll('.bar-dropdown button[role="menuitem"]')[1];
+      (deleteBtn as HTMLElement)?.click();
+      fixture.detectChanges();
+
+      expect(component.showDeleteConfirm()).toBe(true);
+      expect(component.menuOpen()).toBe(true);
+
+      const cancelBtn = fixture.nativeElement.querySelector('.bar-dropdown-confirm-content .bar-dropdown-confirm-option:not(.bar-dropdown-confirm-delete)');
+      (cancelBtn as HTMLElement)?.click();
+      fixture.detectChanges();
+
+      expect(component.showDeleteConfirm()).toBe(false);
+      expect(component.menuOpen()).toBe(false);
+    });
+
+    it('should not emit delete when Cancel is clicked in delete confirmation', () => {
+      let deleteEmitted = false;
+      component.delete.subscribe(() => (deleteEmitted = true));
+
+      component.barHovered.set(true);
+      component.menuOpen.set(true);
+      fixture.detectChanges();
+
+      const deleteBtn = fixture.nativeElement.querySelectorAll('.bar-dropdown button[role="menuitem"]')[1];
+      (deleteBtn as HTMLElement)?.click();
+      fixture.detectChanges();
+
+      const cancelBtn = fixture.nativeElement.querySelector('.bar-dropdown-confirm-content .bar-dropdown-confirm-option:not(.bar-dropdown-confirm-delete)');
+      (cancelBtn as HTMLElement)?.click();
+
+      expect(deleteEmitted).toBe(false);
     });
   });
 });

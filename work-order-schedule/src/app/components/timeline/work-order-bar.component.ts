@@ -47,21 +47,34 @@ import type { WorkOrderDocument } from '../../models/work-order';
         @if (menuOpen()) {
           <div
             class="bar-dropdown-backdrop"
-            (click)="menuOpen.set(false)"
+            (click)="onBackdropClick()"
           ></div>
           <div
             class="bar-dropdown"
+            [class.bar-dropdown-confirm]="showDeleteConfirm()"
             role="menu"
             [attr.aria-label]="'Actions for ' + workOrder().data.name"
             [style.top.px]="dropdownTop()"
             [style.left.px]="dropdownLeft()"
           >
-            <button type="button" role="menuitem" (click)="edit.emit(workOrder()); menuOpen.set(false)">
-              Edit
-            </button>
-            <button type="button" role="menuitem" (click)="delete.emit(workOrder()); menuOpen.set(false)">
-              Delete
-            </button>
+            @if (showDeleteConfirm()) {
+              <div class="bar-dropdown-confirm-content">
+                <p class="bar-dropdown-confirm-message">Delete {{ workOrder().data.name }}?</p>
+                <button type="button" class="bar-dropdown-confirm-option bar-dropdown-confirm-delete" (click)="confirmDelete()">
+                  Delete
+                </button>
+                <button type="button" class="bar-dropdown-confirm-option" (click)="showDeleteConfirm.set(false); menuOpen.set(false)">
+                  Cancel
+                </button>
+              </div>
+            } @else {
+              <button type="button" role="menuitem" (click)="edit.emit(workOrder()); menuOpen.set(false)">
+                Edit
+              </button>
+              <button type="button" role="menuitem" (click)="onDeleteClick()">
+                Delete
+              </button>
+            }
           </div>
         }
       </div>
@@ -82,6 +95,7 @@ export class WorkOrderBarComponent {
   delete = output<WorkOrderDocument>();
   focusRequest = output<WorkOrderDocument>();
   menuOpen = signal(false);
+  showDeleteConfirm = signal(false);
   barHovered = signal(false);
   dropdownTop = signal(0);
   dropdownLeft = signal(0);
@@ -137,6 +151,7 @@ export class WorkOrderBarComponent {
     const willOpen = !this.menuOpen();
     this.menuOpen.set(willOpen);
     if (willOpen) {
+      this.showDeleteConfirm.set(false);
       this.nameTooltipVisible.set(false);
       if (this.nameTooltipTimeout) {
         clearTimeout(this.nameTooltipTimeout);
@@ -146,19 +161,36 @@ export class WorkOrderBarComponent {
     }
   }
 
+  onBackdropClick(): void {
+    this.showDeleteConfirm.set(false);
+    this.menuOpen.set(false);
+  }
+
+  onDeleteClick(): void {
+    this.showDeleteConfirm.set(true);
+    setTimeout(() => this.updateDropdownPosition(), 0);
+  }
+
+  confirmDelete(): void {
+    this.delete.emit(this.workOrder());
+    this.showDeleteConfirm.set(false);
+    this.menuOpen.set(false);
+  }
+
   private updateDropdownPosition(): void {
     setTimeout(() => {
       const btn = this.menuBtnRef?.nativeElement;
       if (!btn) return;
       const rect = btn.getBoundingClientRect();
-      const dropdownHeight = 80;
+      const dropdownHeight = this.showDeleteConfirm() ? 110 : 80;
+      const dropdownWidth = this.showDeleteConfirm() ? 200 : 80;
       const viewportHeight = window.innerHeight;
       const spaceBelow = viewportHeight - rect.bottom;
       const openDown = spaceBelow >= dropdownHeight || spaceBelow >= rect.top;
       this.dropdownTop.set(
         openDown ? rect.bottom + 4 : rect.top - dropdownHeight - 4
       );
-      this.dropdownLeft.set(Math.max(8, rect.right - 80));
+      this.dropdownLeft.set(Math.max(8, rect.right - dropdownWidth));
     }, 0);
   }
 

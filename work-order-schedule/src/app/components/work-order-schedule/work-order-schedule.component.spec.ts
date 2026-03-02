@@ -1,6 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { WorkOrderScheduleComponent } from './work-order-schedule.component';
+import { TimelineComponent } from '../timeline/timeline.component';
 import { WorkOrderService } from '../../services/work-order.service';
 import { ZoomLevelService } from '../../services/zoom-level.service';
 import { TimelineRangeService } from '../../services/timeline-range.service';
@@ -106,7 +107,18 @@ describe('WorkOrderScheduleComponent', () => {
     });
 
     it('should call createWorkOrder when in create mode', () => {
-      spyOn(workOrderService, 'createWorkOrder');
+      const created: WorkOrderDocument = {
+        docId: 'wo-new',
+        docType: 'workOrder',
+        data: {
+          name: 'New Order',
+          workCenterId: 'wc-1',
+          status: 'open',
+          startDate: '2025-06-15',
+          endDate: '2025-06-22',
+        },
+      };
+      spyOn(workOrderService, 'createWorkOrder').and.returnValue(created);
       component.panelMode.set('create');
       component.onPanelSave({
         name: 'New Order',
@@ -122,6 +134,30 @@ describe('WorkOrderScheduleComponent', () => {
         startDate: '2025-06-15',
         endDate: '2025-06-22',
       });
+    });
+
+    it('should focus the created work order in the timeline', () => {
+      const created: WorkOrderDocument = {
+        docId: 'wo-new',
+        docType: 'workOrder',
+        data: {
+          name: 'New Order',
+          workCenterId: 'wc-1',
+          status: 'open',
+          startDate: '2025-06-15',
+          endDate: '2025-06-22',
+        },
+      };
+      spyOn(workOrderService, 'createWorkOrder').and.returnValue(created);
+      component.panelMode.set('create');
+      component.onPanelSave({
+        name: 'New Order',
+        workCenterId: 'wc-1',
+        status: 'open',
+        startDate: '2025-06-15',
+        endDate: '2025-06-22',
+      });
+      expect(component.focusedWorkOrderId()).toBe('wo-new');
     });
 
     it('should call updateWorkOrder when in edit mode', () => {
@@ -173,5 +209,24 @@ describe('WorkOrderScheduleComponent', () => {
       expect(component.selectedWorkOrder()).toBeNull();
       expect(component.clickContext()).toBeNull();
     });
+  });
+
+  describe('keyboard navigation', () => {
+    beforeEach(() => {
+      flushInitialData();
+      fixture.detectChanges();
+    });
+
+    it('should focus timeline on panel close to resume keyboard control', fakeAsync(() => {
+      const timeline = fixture.debugElement.query(
+        (p) => p.componentInstance instanceof TimelineComponent
+      )?.componentInstance as TimelineComponent;
+      spyOn(timeline, 'focusTimeline');
+
+      component.onPanelClose();
+
+      tick(250);
+      expect(timeline.focusTimeline).toHaveBeenCalled();
+    }));
   });
 });

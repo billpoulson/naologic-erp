@@ -41,6 +41,12 @@ export class WorkOrderService {
     return new URLSearchParams(window.location.search).get('reset') === '1';
   }
 
+  private shouldLoadEmptyFromQuery(): boolean {
+    if (!this.canUseStorage) return false;
+    const empty = new URLSearchParams(window.location.search).get('empty');
+    return empty === '1' || empty === '';
+  }
+
   private loadData(): void {
     this.http
       .get<WorkCenterDocument[]>('data/work-centers.json')
@@ -50,6 +56,15 @@ export class WorkOrderService {
         finalize(() => this.loadingWorkCentersSubject.next(false))
       )
       .subscribe();
+
+    if (this.shouldLoadEmptyFromQuery()) {
+      if (this.canUseStorage) {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+      this.workOrdersSubject.next([]);
+      this.loadingWorkOrdersSubject.next(false);
+      return;
+    }
 
     if (this.shouldResetFromQuery()) {
       if (this.canUseStorage) {

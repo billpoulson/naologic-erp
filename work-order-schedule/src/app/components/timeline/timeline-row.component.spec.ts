@@ -289,4 +289,38 @@ describe('TimelineRowComponent', () => {
       expect(bar?.classList.contains('continues-right')).toBe(true);
     });
   });
+
+  describe('keyboard navigation (focusedEmptySlot)', () => {
+    it('should show "Press Enter to add dates" when focusedEmptySlot is set for this row', () => {
+      fixture.componentRef.setInput('workOrders', []);
+      fixture.componentRef.setInput('focusedEmptySlot', {
+        rowIndex: 0,
+        centerMs: new Date(2025, 0, 15).getTime(),
+        workCenterId: 'wc-1',
+      });
+      fixture.detectChanges();
+
+      expect(component.clickHintText()).toBe('Press Enter to add dates');
+    });
+
+    it('should show "Click to add dates" when focusedEmptySlot is null', () => {
+      fixture.componentRef.setInput('workOrders', []);
+      fixture.componentRef.setInput('focusedEmptySlot', null);
+      fixture.detectChanges();
+
+      expect(component.clickHintText()).toBe('Click to add dates');
+    });
+
+    it('should set showClickHint when focusedEmptySlot is set for this row', () => {
+      fixture.componentRef.setInput('workOrders', []);
+      fixture.componentRef.setInput('focusedEmptySlot', {
+        rowIndex: 0,
+        centerMs: new Date(2025, 0, 15).getTime(),
+        workCenterId: 'wc-1',
+      });
+      fixture.detectChanges();
+
+      expect(component.showClickHint()).toBe(true);
+    });
+  });
 });

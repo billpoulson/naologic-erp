@@ -12,7 +12,7 @@ test.describe('Create and Edit', () => {
     await page.screenshot({ path: 'test-results/screenshots/create-panel-open.png' });
   });
 
-  test('create work order adds bar', async ({ page }) => {
+  test('create work order adds bar and focuses it in timeline', async ({ page }) => {
     await page.locator('.timeline-row').first().click({ position: { x: 5000, y: 22 }, force: true });
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible({ timeout: 5000 });
     await page.getByPlaceholder('Acme Inc.').fill('New Test Order');
@@ -21,7 +21,9 @@ test.describe('Create and Edit', () => {
     await page.screenshot({ path: 'test-results/screenshots/create-form-filled.png' });
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).not.toBeVisible();
-    await expect(page.getByText('New Test Order')).toHaveCount(1, { timeout: 10000 });
+    const newBar = page.locator('.work-order-bar').filter({ hasText: 'New Test Order' });
+    await expect(newBar).toHaveCount(1, { timeout: 10000 });
+    await expect(newBar).toHaveClass(/focused/);
     await page.screenshot({ path: 'test-results/screenshots/create-work-order-success.png' });
   });
 
@@ -47,7 +49,7 @@ test.describe('Create and Edit', () => {
     // Dropdown positions via setTimeout(0); wait for it to render
     await page.locator('.bar-dropdown').waitFor({ state: 'visible', timeout: 5000 });
     await page.screenshot({ path: 'test-results/screenshots/bar-dropdown-open.png' });
-    await page.locator('.bar-dropdown').getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('menuitem', { name: 'Edit' }).click();
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
     await page.screenshot({ path: 'test-results/screenshots/edit-panel-open.png' });
   });
@@ -70,7 +72,7 @@ test.describe('Create and Edit', () => {
 
   test('edit and save updates work order', async ({ page }) => {
     await openBarMenu(page);
-    await page.locator('.bar-dropdown').getByRole('button', { name: 'Edit' }).click({ timeout: 5000 });
+    await page.getByRole('menuitem', { name: 'Edit' }).click({ timeout: 5000 });
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
 
     const nameInput = page.getByPlaceholder('Acme Inc.');
@@ -97,7 +99,10 @@ test.describe('Create and Edit', () => {
     await bar.hover();
     await bar.locator('.bar-menu-btn').waitFor({ state: 'visible', timeout: 3000 });
     await bar.locator('.bar-menu-btn').click({ force: true });
-    await page.locator('.bar-dropdown').getByRole('button', { name: 'Delete' }).click({ timeout: 5000 });
+    await page.locator('.bar-dropdown').waitFor({ state: 'visible', timeout: 5000 });
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await page.locator('.bar-dropdown-confirm-delete').waitFor({ state: 'visible', timeout: 5000 });
+    await page.locator('.bar-dropdown-confirm-delete').click();
 
     await expect(page.getByText('To Be Deleted')).toHaveCount(0);
   });

@@ -57,6 +57,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 5;
 }
 
 .click-hint-tooltip {
@@ -66,6 +67,7 @@
   transform: translateX(-50%);
   margin-bottom: 4px;
   padding: 4px 8px;
+  z-index: 10;
   color: rgba(249, 250, 255, 1);
   font-family: CircularStd-Book;
   font-size: 14px;

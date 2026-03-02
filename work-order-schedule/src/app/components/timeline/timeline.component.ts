@@ -125,7 +125,9 @@ const HEADER_HEIGHT_PX = 44;
                           (click)="filterQuery.set(''); $event.stopPropagation()"
                           title="Clear name filter"
                         >
-                          <span aria-hidden="true">×</span>
+                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                            <path d="M1 1l10 10M11 1L1 11"/>
+                          </svg>
                         </button>
                       </div>
                       <div class="filter-dropdown-row filter-date-row">
@@ -161,9 +163,22 @@ const HEADER_HEIGHT_PX = 44;
                           (click)="clearDateFilter(); $event.stopPropagation()"
                           title="Clear date filter"
                         >
-                          <span aria-hidden="true">×</span>
+                          <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                            <path d="M1 1l10 10M11 1L1 11"/>
+                          </svg>
                         </button>
                       </div>
+                      @if (hasAnyFilter()) {
+                        <button
+                          type="button"
+                          class="filter-clear-all-btn"
+                          aria-label="Clear all filters"
+                          (click)="clearAllFilters(); $event.stopPropagation()"
+                          title="Clear all filters"
+                        >
+                          Clear all
+                        </button>
+                      }
                     </div>
                   }
                 </div>
@@ -213,6 +228,7 @@ const HEADER_HEIGHT_PX = 44;
                     <app-timeline-row
                       [workCenter]="item.workCenter"
                       [focusedWorkOrderId]="focusedWorkOrderId()"
+                      [focusedEmptySlot]="focusedEmptySlot()?.workCenterId === item.workCenter.docId ? focusedEmptySlot() : null"
                       [isHoveredFromCell]="hoveredWorkCenterId() === item.workCenter.docId"
                       [workOrders]="getOrdersForCenter(item.workCenter.docId)"
                       [rangeStart]="dateRange().start"
@@ -256,10 +272,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   workOrders = input.required<WorkOrderDocument[]>();
   loading = input<boolean>(false);
   zoomLevel = input<ZoomLevel>('month');
+  focusedWorkOrderId = input<string | null>(null);
 
   createRequest = output<{ date: Date; workCenterId: string }>();
   editRequest = output<WorkOrderDocument>();
   deleteRequest = output<WorkOrderDocument>();
+  focusChange = output<WorkOrderDocument | null>();
 
   protected readonly HEADER_HEIGHT_PX = HEADER_HEIGHT_PX;
   protected readonly ROW_HEIGHT_PX = ROW_HEIGHT_PX;
@@ -334,6 +352,8 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     return start !== null || end !== null;
   });
 
+  hasAnyFilter = computed(() => this.filterQuery().length > 0 || this.hasDateFilter());
+
   /** Work centers after applying text and date filters */
   filteredWorkCenters = computed(() => {
     const centers = this.workCenters();
@@ -347,6 +367,10 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       result = result.filter((wc) => wc.data.name.toLowerCase().includes(query));
     }
     if (startNgb || endNgb) {
+      // Date filter semantics (overlap): show work orders if any part of their range falls within the filter.
+      // - Start date only: filter range [start, ∞) — work order overlaps if woEnd >= filterStart
+      // - End date only: filter range (-∞, end] — work order overlaps if woStart <= filterEnd
+      // - Both: filter range [start, end] — work order overlaps if woStart <= filterEnd && woEnd >= filterStart
       const filterStartMs = startNgb
         ? new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime()
         : 0;
@@ -383,7 +407,12 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   @ViewChild('filterBtn') filterBtnRef?: ElementRef<HTMLButtonElement>;
 
   protected hoveredWorkCenterId = signal<string | null>(null);
-  focusedWorkOrderId = signal<string | null>(null);
+  /** When keyboard nav focuses empty space (no bar to left/right) */
+  protected focusedEmptySlot = signal<{
+    rowIndex: number;
+    centerMs: number;
+    workCenterId: string;
+  } | null>(null);
   filterOpen = signal(false);
   filterDropdownTop = signal(0);
   filterDropdownLeft = signal(0);
@@ -431,7 +460,16 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       const id = this.focusedWorkOrderId();
       if (!id) return;
       const exists = this.workOrders().some((wo) => wo.docId === id);
-      if (!exists) this.focusedWorkOrderId.set(null);
+      if (!exists) this.focusChange.emit(null);
+    });
+    effect(() => {
+      const id = this.focusedWorkOrderId();
+      if (!id) return;
+      const items = this.buildNavItems();
+      const item = items.find((x) => x.docId === id);
+      if (item) {
+        this.scrollFocusedBarIntoView(item.rowIndex);
+      }
     });
   }
 
@@ -715,7 +753,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         if (!btn) return;
         const rect = btn.getBoundingClientRect();
         this.filterDropdownTop.set(rect.bottom + 4);
-        this.filterDropdownLeft.set(rect.right - 260);
+        this.filterDropdownLeft.set(rect.right - 130);
       }, 0);
     }
   }
@@ -768,13 +806,44 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     this.filterEndDate.set(null);
   }
 
+  clearAllFilters(): void {
+    this.filterQuery.set('');
+    this.clearDateFilter();
+  }
+
   onBarFocus(workOrder: WorkOrderDocument): void {
-    this.focusedWorkOrderId.set(workOrder.docId);
+    this.focusChange.emit(workOrder);
+    this.focusTimeline();
+  }
+
+  /** Focus the timeline scroll container for keyboard navigation. Call when panel closes to resume keyboard control. */
+  focusTimeline(): void {
     this.scrollContainerRef?.nativeElement?.focus();
   }
 
   onKeydown(event: KeyboardEvent): void {
     const key = event.key;
+
+    if (key === 'Enter') {
+      const emptySlot = this.focusedEmptySlot();
+      if (emptySlot) {
+        event.preventDefault();
+        const date = new Date(emptySlot.centerMs);
+        this.createRequest.emit({ date, workCenterId: emptySlot.workCenterId });
+        this.focusedEmptySlot.set(null);
+        return;
+      }
+      const id = this.focusedWorkOrderId();
+      if (id) {
+        const wo = this.workOrders().find((x) => x.docId === id);
+        if (wo) {
+          event.preventDefault();
+          this.editRequest.emit(wo);
+        }
+      }
+      return;
+    }
+
     if (key !== 'ArrowLeft' && key !== 'ArrowRight' && key !== 'ArrowUp' && key !== 'ArrowDown') {
       return;
     }
@@ -785,6 +854,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
 
     const currentId = this.focusedWorkOrderId();
     const current = currentId ? items.find((x) => x.docId === currentId) : null;
+    const hadEmptySlot = this.focusedEmptySlot();
 
     let next: (typeof items)[0] | null = null;
 
@@ -819,8 +889,38 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     }
 
     if (next) {
-      this.focusedWorkOrderId.set(next.docId);
+      this.focusedEmptySlot.set(null);
+      const wo = this.workOrders().find((x) => x.docId === next.docId);
+      this.focusChange.emit(wo ?? null);
       this.scrollFocusedBarIntoView(next.rowIndex);
+    } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      const range = this.dateRange();
+      if (current && range) {
+        const wo = this.workOrders().find((x) => x.docId === current.docId);
+        if (wo) {
+          const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
+          const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();
+          const rangeStartMs = range.start.getTime();
+          const rangeEndMs = range.end.getTime();
+          const DAY_MS = 24 * 60 * 60 * 1000;
+          let centerMs: number;
+          if (key === 'ArrowRight') {
+            centerMs = woEnd + 3.5 * DAY_MS;
+          } else {
+            centerMs = woStart - 3.5 * DAY_MS;
+          }
+          centerMs = Math.max(rangeStartMs, Math.min(rangeEndMs, centerMs));
+          this.focusChange.emit(null);
+          this.focusedEmptySlot.set({
+            rowIndex: current.rowIndex,
+            centerMs,
+            workCenterId: current.workCenterId,
+          });
+          this.scrollFocusedBarIntoView(current.rowIndex);
+        }
+      } else if (hadEmptySlot && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+        this.focusedEmptySlot.set(null);
+      }
     }
   }
 

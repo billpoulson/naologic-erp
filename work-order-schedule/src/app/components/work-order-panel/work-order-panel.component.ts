@@ -113,7 +113,7 @@ function addDays(date: Date, days: number): Date {
             <input
               id="panel-start-date"
               class="form-control"
-              placeholder="DD.MM.YYYY"
+              placeholder="MM.DD.YYYY"
               ngbDatepicker
               #dpStart="ngbDatepicker"
               (click)="dpStart.toggle()"
@@ -126,7 +126,7 @@ function addDays(date: Date, days: number): Date {
             <input
               id="panel-end-date"
               class="form-control"
-              placeholder="DD.MM.YYYY"
+              placeholder="MM.DD.YYYY"
               ngbDatepicker
               #dpEnd="ngbDatepicker"
               (click)="dpEnd.toggle()"

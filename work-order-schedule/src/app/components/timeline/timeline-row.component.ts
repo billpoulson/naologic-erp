@@ -12,11 +12,15 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
   selector: 'app-timeline-row',
   standalone: true,
   imports: [WorkOrderBarComponent],
+  host: {
+    class: 'timeline-row-host',
+    style: 'display: block; width: 100%; min-height: 48px;',
+  },
   template: `
     <div
       class="timeline-row"
       (click)="onRowClick($event)"
-      (mouseenter)="onMouseEnter()"
+      (mouseenter)="onMouseEnter($event)"
       (mouseleave)="onMouseLeave()"
       (mousemove)="onMouseMove($event)"
       [class.hovered]="hovered() || isHoveredFromCell()"
@@ -48,14 +52,14 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
             (focusRequest)="focusRequest.emit($event)"
           />
         }
-        @if ((hovered() || isHoveredFromCell()) && showClickHint()) {
+        @if (showClickHintOrEmptySlot()) {
           <div
             class="click-hint-bar"
             [style.left.px]="clickHintLeft()"
             [style.width.px]="clickHintWidth"
             aria-hidden="true"
           >
-            <span class="click-hint-tooltip">Click to add dates</span>
+            <span class="click-hint-tooltip">{{ clickHintText() }}</span>
           </div>
         }
       </div>
@@ -66,6 +70,7 @@ import { WorkOrderBarComponent } from './work-order-bar.component';
 export class TimelineRowComponent {
   workCenter = input.required<WorkCenterDocument>();
   focusedWorkOrderId = input<string | null>(null);
+  focusedEmptySlot = input<{ rowIndex: number; centerMs: number; workCenterId: string } | null>(null);
   isHoveredFromCell = input<boolean>(false);
   workOrders = input<WorkOrderDocument[]>([]);
   rangeStart = input.required<Date>();
@@ -88,16 +93,55 @@ export class TimelineRowComponent {
   hovered = signal(false);
   hoverX = signal<number | null>(null);
   readonly clickHintWidth = 113;
+  /** Left column width (work center names) - used for visible viewport calculation */
+  private readonly leftColumnWidth = 380;
   /** Min pixels the bar must be off-screen before showing the label (avoids overlap) */
   private readonly offScreenLabelMinGap = 60;
   /** Pixels of scroll distance over which the off-screen label fades out */
   private readonly offScreenLabelFadeZone = 120;
 
-  showClickHint = computed(() => {
+  /** Effective hover X for hint: from mouse, viewport center when hovering left cell, or keyboard empty slot */
+  effectiveHoverX = computed(() => {
+    const slot = this.focusedEmptySlot();
+    if (slot) {
+      const start = this.rangeStart();
+      const end = this.rangeEnd();
+      const width = this.timelineWidth();
+      if (start && end && width > 0) {
+        return this.calculator.dateToPosition(
+          new Date(slot.centerMs),
+          start,
+          end,
+          width,
+          { clamp: false }
+        );
+      }
+    }
     const x = this.hoverX();
+    if (x !== null) return x;
+    if (this.isHoveredFromCell()) {
+      const { scrollLeft, viewportWidth } = this.scrollState();
+      return scrollLeft + viewportWidth / 2;
+    }
+    return null;
+  });
+
+  showClickHint = computed(() => {
+    if (this.focusedEmptySlot()) return true;
+    const x = this.effectiveHoverX();
     if (x === null) return false;
     return !this.isPositionOverWorkOrder(x);
   });
+
+  showClickHintOrEmptySlot = computed(() => {
+    const slot = this.focusedEmptySlot();
+    if (slot) return true;
+    return (this.hovered() || this.isHoveredFromCell()) && this.showClickHint();
+  });
+
+  clickHintText = computed(() =>
+    this.focusedEmptySlot() ? 'Press Enter to add dates' : 'Click to add dates'
+  );
 
   /** Work order for bar whose name is off-screen to the left (closest to visible area) */
   offScreenLeftLabel = computed(() => {
@@ -146,13 +190,14 @@ export class TimelineRowComponent {
   });
 
   clickHintLeft = computed(() => {
-    const x = this.hoverX();
+    const x = this.effectiveHoverX();
     const width = this.timelineWidth();
+    const { scrollLeft, viewportWidth } = this.scrollState();
     const bars = this.barPositions();
     if (x === null) return 0;
 
+    // Center hint under cursor, then avoid overlapping bars
     let left = x - this.clickHintWidth / 2;
-    left = Math.max(0, Math.min(width - this.clickHintWidth, left));
 
     for (const bar of bars) {
       const barRight = bar.left + bar.width;
@@ -163,6 +208,17 @@ export class TimelineRowComponent {
         left = Math.min(left, bar.left - this.clickHintWidth);
       }
     }
+
+    // Clamp to full timeline width
+    left = Math.max(0, Math.min(width - this.clickHintWidth, left));
+
+    // Clamp to visible viewport (timeline area starts at leftColumnWidth in scroll content)
+    const visibleLeft = Math.max(0, scrollLeft - this.leftColumnWidth);
+    const visibleRight = Math.min(
+      width - this.clickHintWidth,
+      scrollLeft + viewportWidth - this.leftColumnWidth - this.clickHintWidth
+    );
+    left = Math.max(visibleLeft, Math.min(visibleRight, left));
 
     return Math.max(0, Math.min(width - this.clickHintWidth, left));
   });
@@ -211,9 +267,10 @@ export class TimelineRowComponent {
     });
   });
 
-  onMouseEnter(): void {
+  onMouseEnter(event: MouseEvent): void {
     this.hovered.set(true);
     this.hoverChange.emit(this.workCenter().docId);
+    this.updateHoverX(event);
   }
 
   onMouseLeave(): void {
@@ -223,12 +280,16 @@ export class TimelineRowComponent {
   }
 
   onMouseMove(event: MouseEvent): void {
+    this.updateHoverX(event);
+  }
+
+  private updateHoverX(event: MouseEvent): void {
     const row = event.currentTarget as HTMLElement;
     const content = row.querySelector('.timeline-row-content') as HTMLElement;
     if (!content) return;
     const rect = content.getBoundingClientRect();
-    const { scrollLeft } = this.scrollState();
-    const x = event.clientX - rect.left + scrollLeft;
+    // rect.left already reflects scroll; x = offset from content's left edge
+    const x = event.clientX - rect.left;
     this.hoverX.set(x);
   }
 
@@ -245,8 +306,7 @@ export class TimelineRowComponent {
     if (!content) return;
 
     const rect = content.getBoundingClientRect();
-    const { scrollLeft } = this.scrollState();
-    const x = event.clientX - rect.left + scrollLeft;
+    const x = event.clientX - rect.left;
     const date = this.calculator.positionToDate(
       x,
       this.rangeStart(),

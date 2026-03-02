@@ -124,8 +124,10 @@ test.describe('User Documentation', () => {
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(300);
     await page.getByPlaceholder('Acme Inc.').fill('Overlapping Order');
-    await page.getByLabel('Start date').fill('01.05.2016');
-    await page.getByLabel('End date').fill('01.06.2016');
+    await page.locator('.status-select .ng-select-container').click();
+    await page.getByRole('option', { name: 'Open' }).click();
+    await page.getByLabel('Start date').fill('05.01.2016');
+    await page.getByLabel('End date').fill('06.01.2016');
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '11-overlap-form-filled.png') });
 

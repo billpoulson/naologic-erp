@@ -28,16 +28,6 @@ Use the **Timescale** dropdown to switch between:
 
 ![Month view](screenshots/04-timeline-month-view.png)
 
-### Filtering work centers
-
-Click the **⋯** (ellipsis) button next to "Work Center" to open the filter popover. You can filter by:
-
-- **Name** – Case-insensitive text match on work center name
-- **Date range** – Filter by start date, end date, or both. A work order is shown if any part of its range falls within the filter (overlap):
-  - **Start date only** – Show work orders that end on or after that date
-  - **End date only** – Show work orders that start on or before that date
-  - **Both dates** – Show work orders that overlap the date range
-
 ---
 
 ## Creating a Work Order

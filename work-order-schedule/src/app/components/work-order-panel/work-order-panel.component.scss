@@ -25,6 +25,7 @@
   top: 0;
   right: 0;
   width: $layout-panel-width;
+  max-width: 100vw;
   height: 100%;
   background-color: rgba(255, 255, 255, 1);
   box-shadow: 0 5px 15px 0 rgba(216, 220, 235, 1), 0 2.5px 3px -1.5px rgba(200, 207, 233, 1), 0 4.5px 5px -1px rgba(216, 220, 235, 1);
@@ -39,6 +40,12 @@
 
 .panel::-webkit-scrollbar {
   display: none;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    width: 100%;
+  }
 }
 
 .panel.closing {

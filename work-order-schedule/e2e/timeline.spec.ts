@@ -5,8 +5,8 @@ test.describe('Timeline', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Work Orders' })).toBeVisible();
     await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
-    await expect(page.getByText('Naquadah Refining')).toBeVisible();
-    await expect(page.getByText('Ring Component Fab')).toBeVisible();
+    await expect(page.getByText('Extrusion Line A')).toBeVisible();
+    await expect(page.getByText('CNC Machine 1')).toBeVisible();
     await page.screenshot({ path: 'test-results/screenshots/timeline-loaded--month-default.png' });
   });
 

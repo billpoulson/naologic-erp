@@ -8,12 +8,16 @@ test.describe('Overlap Validation', () => {
     await page.locator('.timeline-row').first().click({ position: { x: 5000, y: 22 }, force: true });
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible({ timeout: 5000 });
     await page.getByPlaceholder('Acme Inc.').fill('Overlap Test');
-    // Use DD.MM.YYYY; dates must overlap existing order (wc-1 has orders from 2016)
-    await page.getByLabel('Start date').fill('01.05.2016');
-    await page.getByLabel('End date').fill('15.06.2016');
+    // Status is required; click ng-select to ensure form is valid (format is MM.DD.YYYY)
+    await page.locator('.status-select .ng-select-container').click();
+    await page.getByRole('option', { name: 'Open' }).click();
+    await page.waitForTimeout(150);
+    await page.getByLabel('Start date').fill('05.01.2016');
+    await page.getByLabel('End date').fill('06.15.2016');
     await page.screenshot({ path: 'test-results/screenshots/overlap-form-before-submit.png' });
+    await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled({ timeout: 3000 });
     await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.getByText('Work orders cannot overlap on the same work center.')).toBeVisible();
+    await expect(page.getByText('Work orders cannot overlap on the same work center.')).toBeVisible({ timeout: 5000 });
     await page.screenshot({ path: 'test-results/screenshots/overlap-error.png' });
   });
 });

@@ -2,7 +2,7 @@
 
 Angular 20 (LTS) Work Order Schedule Timeline with timeline grid, work order bars, create/edit panel, and overlap detection.
 
-> **Full documentation**: See the [main README](../README.md) for the user guide, feature highlights, and project overview.
+> **Full documentation**: See the [main README](../README.md) for the user guide, feature highlights, approach (ADR-based decisions), and libraries used.
 
 ## Setup
 
@@ -10,7 +10,7 @@ Angular 20 (LTS) Work Order Schedule Timeline with timeline grid, work order bar
 npm install
 ```
 
-## Development server
+## Run the Application
 
 ```bash
 ng serve

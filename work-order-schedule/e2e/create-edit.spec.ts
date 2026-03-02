@@ -80,23 +80,32 @@ test.describe('Create and Edit', () => {
     await nameInput.fill('Edited Work Order Name');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).not.toBeVisible();
-    await expect(page.getByText('Edited Work Order Name')).toHaveCount(1);
+    const editedBar = page.locator('.work-order-bar').filter({ hasText: 'Edited Work Order Name' });
+    await expect(editedBar).toHaveCount(1);
   });
 
   test('delete removes work order bar', async ({ page }) => {
-    await page.locator('.timeline-row').first().click({ position: { x: 5000, y: 22 }, force: true });
+    // Use ?empty=1 to avoid overlap with existing orders from sample data
+    await page.goto('/?empty=1');
+    await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
+    await page.locator('.timeline-row').first().click({ position: { x: 500, y: 22 }, force: true });
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible({ timeout: 5000 });
     await page.getByPlaceholder('Acme Inc.').fill('To Be Deleted');
-    await page.getByLabel('Start date').fill('01.01.2030');
-    await page.getByLabel('End date').fill('07.01.2030');
+    await page.locator('.status-select .ng-select-container').click();
+    await page.getByRole('option', { name: 'Open' }).click();
+    // Use dates within default timeline range (today ± 24 months) so bar is visible
+    await page.getByLabel('Start date').fill('03.01.2025');
+    await page.getByLabel('End date').fill('03.10.2025');
+    await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled({ timeout: 3000 });
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('To Be Deleted')).toHaveCount(1, { timeout: 15000 });
 
-    await page.locator('.timeline-scroll').evaluate((el) => { el.scrollLeft = el.scrollWidth; });
     await page.waitForTimeout(300);
     const bar = page.locator('.work-order-bar').filter({ hasText: 'To Be Deleted' });
     await bar.waitFor({ state: 'visible', timeout: 5000 });
-    await bar.hover();
+    await bar.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+    await bar.hover({ force: true });
     await bar.locator('.bar-menu-btn').waitFor({ state: 'visible', timeout: 3000 });
     await bar.locator('.bar-menu-btn').click({ force: true });
     await page.locator('.bar-dropdown').waitFor({ state: 'visible', timeout: 5000 });

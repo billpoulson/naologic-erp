@@ -468,7 +468,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       const items = this.buildNavItems();
       const item = items.find((x) => x.docId === id);
       if (item) {
-        this.scrollFocusedBarIntoView(item.rowIndex);
+        this.scrollFocusedBarIntoView(item.rowIndex, item.centerMs);
       }
     });
   }
@@ -892,7 +892,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       this.focusedEmptySlot.set(null);
       const wo = this.workOrders().find((x) => x.docId === next.docId);
       this.focusChange.emit(wo ?? null);
-      this.scrollFocusedBarIntoView(next.rowIndex);
+      this.scrollFocusedBarIntoView(next.rowIndex, next.centerMs);
     } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
       const range = this.dateRange();
       if (current && range) {
@@ -916,7 +916,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
             centerMs,
             workCenterId: current.workCenterId,
           });
-          this.scrollFocusedBarIntoView(current.rowIndex);
+          this.scrollFocusedBarIntoView(current.rowIndex, centerMs);
         }
       } else if (hadEmptySlot && (key === 'ArrowLeft' || key === 'ArrowRight')) {
         this.focusedEmptySlot.set(null);
@@ -952,9 +952,14 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     return items;
   }
 
-  private scrollFocusedBarIntoView(rowIndex: number): void {
+  private scrollFocusedBarIntoView(
+    rowIndex: number,
+    centerMs?: number
+  ): void {
     const el = this.scrollContainerRef?.nativeElement;
     if (!el) return;
+
+    // Vertical scroll: ensure row is visible
     const rowTop = rowIndex * ROW_HEIGHT_PX;
     const rowBottom = rowTop + ROW_HEIGHT_PX;
     const viewTop = el.scrollTop;
@@ -964,6 +969,33 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       el.scrollTop = Math.max(0, rowTop - 24);
     } else if (rowBottom > viewBottom) {
       el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, rowBottom - el.clientHeight + 24);
+    }
+
+    // Horizontal scroll: ensure bar center is visible when centerMs provided
+    if (centerMs !== undefined) {
+      const range = this.dateRange();
+      const width = this.timelineWidth();
+      if (range && width > 0) {
+        const centerPx = this.calculator.dateToPosition(
+          new Date(centerMs),
+          range.start,
+          range.end,
+          width,
+          { clamp: false }
+        );
+        const viewLeft = el.scrollLeft;
+        const viewRight = el.scrollLeft + el.clientWidth;
+        const padding = 24;
+
+        if (centerPx < viewLeft + padding) {
+          el.scrollLeft = Math.max(0, centerPx - padding);
+        } else if (centerPx > viewRight - padding) {
+          el.scrollLeft = Math.min(
+            el.scrollWidth - el.clientWidth,
+            centerPx - el.clientWidth + padding
+          );
+        }
+      }
     }
   }
 

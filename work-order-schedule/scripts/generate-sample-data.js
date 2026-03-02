@@ -11,13 +11,39 @@ const fs = require('fs');
 const path = require('path');
 
 const STATUSES = ['complete', 'in-progress', 'open', 'blocked'];
-const STARGATE_NAMES = [
-  'Naquadah Refining',
-  'Ring Component Fab',
-  'Dialing Mechanism',
-  'Wormhole Stabilizer',
-  'Gate Assembly',
+
+const WORK_CENTER_NAMES_FIRST_5 = [
+  'Extrusion Line A',
+  'CNC Machine 1',
+  'Assembly Station',
+  'Quality Control',
+  'Packaging Line',
 ];
+
+const WORK_CENTER_BASE_NAMES = [
+  'Extrusion Line',
+  'CNC Machine',
+  'Assembly Station',
+  'Injection Molding',
+  'Welding Station',
+  'Paint Booth',
+  'Quality Control',
+  'Packaging Line',
+  'Stamping Press',
+  'Drill Press',
+  'Lathe',
+  'Mill',
+  'Deburring',
+  'Heat Treat',
+  'Plating Line',
+];
+
+function getWorkCenterName(index) {
+  if (index < 5) return WORK_CENTER_NAMES_FIRST_5[index];
+  const baseIndex = (index - 5) % WORK_CENTER_BASE_NAMES.length;
+  const repeat = Math.floor((index - 5) / WORK_CENTER_BASE_NAMES.length) + 2;
+  return `${WORK_CENTER_BASE_NAMES[baseIndex]} ${repeat}`;
+}
 
 const NUM_WORK_CENTERS = 1000;
 const PAST_YEARS = 10; // Years of past work
@@ -38,7 +64,7 @@ function generateWorkCenters() {
       docId: `wc-${i + 1}`,
       docType: 'workCenter',
       data: {
-        name: i < 5 ? STARGATE_NAMES[i] : `Work Center ${i + 1}`,
+        name: getWorkCenterName(i),
       },
     });
   }

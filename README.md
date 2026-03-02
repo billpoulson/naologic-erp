@@ -6,15 +6,40 @@ An interactive timeline application for visualizing and managing work orders acr
 
 ---
 
-## Quick Start
+## How to Run
+
+### Setup
 
 ```bash
 cd work-order-schedule
 npm install
+```
+
+### Run the Application
+
+```bash
 ng serve
 ```
 
-Open [http://localhost:4200](http://localhost:4200) in your browser.
+Open [http://localhost:4200](http://localhost:4200) in your browser. No additional setup (e.g. database or API) is required—work orders load from JSON and persist to `localStorage`.
+
+---
+
+## Approach
+
+### Development Workflow
+
+1. **Requirements → wireframe** — Transcode and compile requirements into a wireframe for further refinement.
+2. **Composition & polish** — Once the wireframe resembles the target design, focus on compositional-level components and refine the UI with minimal sample data.
+3. **Volume & performance** — Increase data volume and optimize for performance.
+
+### Testing
+
+Test coverage focuses on **behaviors** and **component integration** — verifying how components work together and that user-facing behavior matches expectations, rather than implementation details.
+
+### Decision Reinforcement
+
+Key decisions are documented as **Architecture Decision Records (ADRs)** in `docs/adr/`. Each ADR has a matching **Cursor rule** in `.cursor/rules/` so that decisions are reinforced during development and consistently applied by tooling. This pairing ensures that documented decisions are not just reference material but actively shape the codebase.
 
 ---
 
@@ -171,21 +196,26 @@ Edit these files and refresh the browser for quick iteration without recompiling
 
 ---
 
-## Tech Stack
+## Libraries Used and Why
 
-- **Angular 20** (LTS), standalone components
-- **TypeScript** (strict mode)
-- **SCSS**, Bootstrap 5, ng-bootstrap
-- **ng-select** for dropdowns
-- **Playwright** for E2E tests
-- **Karma/Jasmine** for unit tests
+| Library | Purpose |
+|---------|---------|
+| **Angular 20** (LTS) | Framework choice; LTS for stability. Standalone components for simpler dependency injection. ([ADR-001](docs/adr/001-angular-v20-lts.md)) |
+| **TypeScript** (strict) | Type safety and better tooling; strict mode catches more errors at compile time. |
+| **SCSS** | Styling with variables and nesting; external files per component. ([ADR-006](docs/adr/006-component-css-external-files.md), [ADR-007](docs/adr/007-prefer-no-inline-styles.md)) |
+| **Bootstrap 5** | Grid, utilities, and base styles; avoids reinventing layout. |
+| **@ng-bootstrap/ng-bootstrap** | Date picker and Bootstrap integration for Angular; required by spec. |
+| **@ng-select/ng-select** | Custom-styled dropdowns (no native `<select>`); pill-style status display and accessible options. |
+| **Playwright** | E2E tests; cross-browser support, reliable selectors, screenshots on failure. |
+| **Karma/Jasmine** | Unit tests; Angular default, integrates with coverage. |
+| **@axe-core/playwright** | Accessibility audits; WCAG 2.1 checks in E2E. |
 
 ---
 
 ## Documentation
 
 - [User Guide](work-order-schedule/docs/USER-GUIDE.md) — step-by-step usage with screenshots
-- [Architecture Decision Records](docs/adr/) — design decisions
+- [Architecture Decision Records](docs/adr/) — design decisions (each paired with a Cursor rule)
 - [WCAG Analysis](docs/WCAG-ANALYSIS.md) — accessibility compliance
 
 ---

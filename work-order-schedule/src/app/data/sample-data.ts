@@ -1,22 +1,49 @@
 import type { WorkCenterDocument } from '../models/work-center';
 import type { WorkOrderDocument } from '../models/work-order';
 
-const STARGATE_NAMES = [
-  'Naquadah Refining',
-  'Ring Component Fab',
-  'Dialing Mechanism',
-  'Wormhole Stabilizer',
-  'Gate Assembly',
+/** First 5 work centers: realistic manufacturing names. */
+const WORK_CENTER_NAMES_FIRST_5 = [
+  'Extrusion Line A',
+  'CNC Machine 1',
+  'Assembly Station',
+  'Quality Control',
+  'Packaging Line',
 ];
 
-/** 1000 work centers for production (Stargate-themed first 5, then generic). */
+/** Base names for work centers 6+ (cycled with numbers). */
+const WORK_CENTER_BASE_NAMES = [
+  'Extrusion Line',
+  'CNC Machine',
+  'Assembly Station',
+  'Injection Molding',
+  'Welding Station',
+  'Paint Booth',
+  'Quality Control',
+  'Packaging Line',
+  'Stamping Press',
+  'Drill Press',
+  'Lathe',
+  'Mill',
+  'Deburring',
+  'Heat Treat',
+  'Plating Line',
+];
+
+function getWorkCenterName(index: number): string {
+  if (index < 5) return WORK_CENTER_NAMES_FIRST_5[index];
+  const baseIndex = (index - 5) % WORK_CENTER_BASE_NAMES.length;
+  const repeat = Math.floor((index - 5) / WORK_CENTER_BASE_NAMES.length) + 2;
+  return `${WORK_CENTER_BASE_NAMES[baseIndex]} ${repeat}`;
+}
+
+/** 1000 work centers with realistic manufacturing names. */
 export const FALLBACK_WORK_CENTERS: WorkCenterDocument[] = Array.from(
   { length: 1000 },
   (_, i) => ({
     docId: `wc-${i + 1}`,
     docType: 'workCenter' as const,
     data: {
-      name: i < 5 ? STARGATE_NAMES[i] : `Work Center ${i + 1}`,
+      name: getWorkCenterName(i),
     },
   })
 );
@@ -73,43 +100,44 @@ function formatIsoDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-const STARGATE_ORDER_NAMES: Record<number, string[]> = {
+/** Work order names for first 5 work centers (realistic manufacturing). */
+const WORK_ORDER_NAMES_BY_CENTER: Record<number, string[]> = {
   1: [
-    'Naquadah ore sourcing & purification',
-    'Superconductor alloy development',
-    'Naquadah trinium composite',
-    'Refining capacity expansion',
-    'Quality control Phase 2',
-    'Storage facility upgrade',
+    'Extrusion run – profile set A',
+    'Material changeover & calibration',
+    'Extrusion run – profile set B',
+    'Die maintenance & cleaning',
+    'Capacity run – standard specs',
+    'Trial run – new material',
   ],
   2: [
-    'Chevron prototype machining',
-    'Inner ring segments (1-9)',
-    'Outer ring & chevron assembly',
-    'Symbol glyph engraving',
-    'Calibration run',
-    'Final inspection',
+    'CNC program – part family 100',
+    'Fixture setup & first article',
+    'Production run – part family 100',
+    'Tool change & offset update',
+    'CNC program – part family 200',
+    'Final inspection run',
   ],
   3: [
-    'Crystal oscillator R&D',
-    'DHD interface prototype',
-    'Address dialing logic & firmware',
-    'Power distribution upgrade',
-    'Diagnostic suite',
+    'Assembly – subassembly A',
+    'Subassembly B & integration',
+    'Final assembly – product line 1',
+    'Rework & touch-up',
+    'Assembly – product line 2',
   ],
   4: [
-    'Event horizon containment theory',
-    'Kawoosh dampening system',
-    'Wormhole stability field generators',
-    'Field calibration',
-    'Safety interlocks',
+    'Incoming inspection – lot 1',
+    'In-process inspection – stage 2',
+    'Final QA sign-off',
+    'Calibration & gauge R&R',
+    'Audit prep & documentation',
   ],
   5: [
-    'Sub-assembly integration Phase 1',
-    'Ring mounting & alignment',
-    'Final integration & power-up',
-    'Acceptance testing',
-    'Documentation',
+    'Pack-out – order #1',
+    'Labeling & kitting',
+    'Ship prep – palletizing',
+    'Inventory cycle count',
+    'Documentation & COA',
   ],
 };
 
@@ -122,7 +150,7 @@ function generateWorkOrdersForCenters1To5(): WorkOrderDocument[] {
   const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 24, 0);
   let woId = 1;
   for (let wc = 1; wc <= 5; wc++) {
-    const names = STARGATE_ORDER_NAMES[wc] ?? [`Work ${wc}`];
+    const names = WORK_ORDER_NAMES_BY_CENTER[wc] ?? [`Production run WC-${wc}`];
     const seedBase = wc * 1000;
     let currentStart = new Date(rangeStart);
     let orderIndex = 0;
@@ -157,7 +185,7 @@ function generateWorkOrdersForCenters1To5(): WorkOrderDocument[] {
 }
 
 /**
- * Stargate construction simulation: 10 years back to 24 months forward, 1000 work centers.
+ * Sample data: 10 years back to 24 months forward, 1000 work centers.
  * All work centers have sequential work orders spanning the full 12-year sample range.
  */
 const orders1To5 = generateWorkOrdersForCenters1To5();

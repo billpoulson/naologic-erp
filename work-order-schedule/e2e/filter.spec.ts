@@ -10,8 +10,8 @@ test.describe('Filter', () => {
     await expect(page.getByPlaceholder('Filter by name...')).toBeVisible();
 
     // Type a filter - use a substring that matches at least one work center
-    await page.getByPlaceholder('Filter by name...').fill('Naquadah');
-    await expect(page.getByText('Naquadah Refining')).toBeVisible();
+    await page.getByPlaceholder('Filter by name...').fill('Extrusion');
+    await expect(page.getByText('Extrusion Line A')).toBeVisible();
     // Other centers should be hidden or filtered
     const rows = page.locator('.timeline-row');
     const count = await rows.count();
@@ -23,27 +23,31 @@ test.describe('Filter', () => {
   });
 
   test('date range filter filters work centers by order overlap', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?reset=1');
     await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
     const rowCountBefore = await page.locator('.timeline-row').count();
 
     const filterBtn = page.getByRole('button', { name: 'Filter work centers' });
     await filterBtn.click();
 
-    // Use wide date range (DD.MM.YYYY) to include orders in visible timeline window
+    // Use wide date range (MM.DD.YYYY per NgbDateDotFormatter) to include orders
     const startInput = page.getByLabel('Filter start date');
     const endInput = page.getByLabel('Filter end date');
     await startInput.fill('01.01.2015');
-    await endInput.fill('31.12.2030');
+    await endInput.fill('12.31.2030');
 
-    // Filter should show centers with orders in range (count may be <= before)
+    // Close filter dropdown so timeline rows are visible; filter applies immediately
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+
     const rows = page.locator('.timeline-row');
     await expect(rows.first()).toBeVisible({ timeout: 5000 });
     const count = await rows.count();
     expect(count).toBeGreaterThanOrEqual(1);
     expect(count).toBeLessThanOrEqual(rowCountBefore);
 
-    // Clear date filter (button visible when both dates set)
+    // Reopen filter and clear date filter
+    await filterBtn.click();
     await page.getByRole('button', { name: 'Clear date filter' }).click();
     await expect(startInput).toHaveValue('');
     await expect(endInput).toHaveValue('');

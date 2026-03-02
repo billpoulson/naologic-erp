@@ -1,0 +1,38 @@
+---
+description: CRITICAL - Release logs must include WCAG summary and highlight actionable entries
+alwaysApply: true
+---
+
+# Release Log – WCAG Summary (CRITICAL)
+
+When producing a **release log**, **changelog**, or **release notes**, you **must**:
+
+## 1. Include WCAG Summary
+
+Add a **WCAG Accessibility** section that summarizes the current state from `docs/WCAG-ANALYSIS.md`:
+
+- Target conformance level (WCAG 2.1 Level AA)
+- Count of criteria: Met / Partial / Needs verification / N/A
+- Brief status (e.g. "Most criteria met; 3 need verification, 2 partial")
+
+## 2. Highlight Actionable Entries
+
+**Actionable** = items that require follow-up. Call them out explicitly:
+
+| Type | Examples |
+|------|----------|
+| **Needs verification** | Contrast, document title, `lang` attribute |
+| **Partial** | Skip link missing, ng-select label association |
+| **Known violations** | color-contrast (timescale label), ng-select in panel |
+| **Recommendations** | High/Medium priority items from §8 |
+
+Format actionable items as a **bulleted list** with clear next steps, e.g.:
+
+- **High:** Add skip link ("Skip to main content")
+- **High:** Fix ng-select label association for panel
+- **Medium:** Fix timescale label contrast (4.42 vs 4.5:1)
+- **Medium:** Verify document `<title>` and `<html lang>`
+
+## 3. Reference Source
+
+Link or cite `docs/WCAG-ANALYSIS.md` so readers can see full details.

@@ -39,7 +39,14 @@ export class TimelineDebugTooltipDirective implements OnDestroy {
 
     const host = this.el.nativeElement;
     const rect = host.getBoundingClientRect();
-    const contentX = event.clientX - rect.left + host.scrollLeft;
+    const visibleX = event.clientX - rect.left;
+
+    if (visibleX < TIMELINE_LEFT_OFFSET_PX) {
+      this.hideTooltip();
+      return;
+    }
+
+    const contentX = visibleX + host.scrollLeft;
     const timelineX = Math.max(0, Math.min(width, contentX - TIMELINE_LEFT_OFFSET_PX));
 
     const date = this.calculator.positionToDate(

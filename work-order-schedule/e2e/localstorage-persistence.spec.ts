@@ -14,7 +14,8 @@ test.describe('LocalStorage Persistence', () => {
     await expect(page.getByText('Persisted Order')).toHaveCount(1, { timeout: 10000 });
 
     await page.reload();
-    await expect(page.getByText('Persisted Order')).toHaveCount(1);
+    await page.waitForSelector('.timeline-row', { state: 'visible', timeout: 10000 });
+    await expect(page.getByText('Persisted Order')).toHaveCount(1, { timeout: 10000 });
   });
 
   test('?reset=1 clears stored data and reloads from JSON', async ({ page }) => {

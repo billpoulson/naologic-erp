@@ -381,14 +381,27 @@ const HEADER_HEIGHT_PX = 44;
       .timeline-filter-btn {
         margin-left: auto;
         margin-right: 12px;
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         background: none;
         border: none;
         cursor: pointer;
-        padding: 4px 8px;
         font-size: 16px;
-        line-height: 1;
+        line-height: 24px;
         color: rgba(104, 113, 150, 0.7);
         border-radius: 4px;
+      }
+
+      .timeline-filter-btn span {
+        display: block;
+        width: 100%;
+        text-align: center;
+        line-height: 24px;
       }
 
       .timeline-filter-btn:hover,
@@ -406,12 +419,11 @@ const HEADER_HEIGHT_PX = 44;
       .filter-dropdown {
         position: fixed;
         z-index: 1000;
-        padding: 6px;
-        min-width: 280px;
+        padding: 12px;
+        min-width: 260px;
         background: rgba(255, 255, 255, 1);
-        border: 1px solid rgba(230, 235, 240, 1);
-        border-radius: 6px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        border-radius: 5px;
+        box-shadow: 0 0 0 1px rgba(104, 113, 150, 0.1), 0 2.5px 3px -1.5px rgba(200, 207, 233, 1), 0 4.5px 5px -1px rgba(216, 220, 235, 1);
       }
 
       .filter-dropdown-row {
@@ -428,9 +440,10 @@ const HEADER_HEIGHT_PX = 44;
 
       .filter-date-label {
         flex-shrink: 0;
-        width: 58px;
+        width: 52px;
         font-size: 11px;
         color: rgba(104, 113, 150, 1);
+        white-space: nowrap;
       }
 
       .filter-date-inputs {
@@ -442,12 +455,14 @@ const HEADER_HEIGHT_PX = 44;
       }
 
       .filter-date-input {
-        flex: 1;
-        min-width: 78px;
+        flex: 1 1 0;
+        min-width: 72px;
       }
 
       .filter-date-sep {
-        flex-shrink: 0;
+        flex: 0 0 8px;
+        width: 8px;
+        text-align: center;
         color: rgba(104, 113, 150, 0.7);
         font-size: 11px;
       }
@@ -481,7 +496,7 @@ const HEADER_HEIGHT_PX = 44;
       .timeline-filter-input {
         flex: 1;
         min-width: 0;
-        padding: 5px 8px;
+        padding: 4px 6px;
         font-size: 12px;
         border: 1px solid rgba(230, 235, 240, 1);
         border-radius: 6px;
@@ -710,7 +725,7 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
   hasDateFilter = computed(() => {
     const start = this.filterStartDate();
     const end = this.filterEndDate();
-    return start !== null && end !== null;
+    return start !== null || end !== null;
   });
 
   /** Work centers after applying text and date filters */
@@ -725,9 +740,13 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
     if (query) {
       result = result.filter((wc) => wc.data.name.toLowerCase().includes(query));
     }
-    if (startNgb && endNgb) {
-      const filterStartMs = new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime();
-      const filterEndMs = new Date(endNgb.year, endNgb.month - 1, endNgb.day, 23, 59, 59, 999).getTime();
+    if (startNgb || endNgb) {
+      const filterStartMs = startNgb
+        ? new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime()
+        : 0;
+      const filterEndMs = endNgb
+        ? new Date(endNgb.year, endNgb.month - 1, endNgb.day, 23, 59, 59, 999).getTime()
+        : Number.MAX_SAFE_INTEGER;
       result = result.filter((wc) =>
         orders.some((wo) => {
           if (wo.data.workCenterId !== wc.docId) return false;
@@ -1090,8 +1109,16 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
         if (!btn) return;
         const rect = btn.getBoundingClientRect();
         this.filterDropdownTop.set(rect.bottom + 4);
-        this.filterDropdownLeft.set(rect.right - 280);
+        this.filterDropdownLeft.set(rect.right - 260);
       }, 0);
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.filterOpen()) {
+      this.filterOpen.set(false);
+      event.preventDefault();
     }
   }
 
@@ -1113,9 +1140,13 @@ export class TimelineComponent implements AfterViewInit, OnDestroy {
       });
     }
 
-    if (startNgb && endNgb) {
-      const filterStartMs = new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime();
-      const filterEndMs = new Date(endNgb.year, endNgb.month - 1, endNgb.day, 23, 59, 59, 999).getTime();
+    if (startNgb || endNgb) {
+      const filterStartMs = startNgb
+        ? new Date(startNgb.year, startNgb.month - 1, startNgb.day).getTime()
+        : 0;
+      const filterEndMs = endNgb
+        ? new Date(endNgb.year, endNgb.month - 1, endNgb.day, 23, 59, 59, 999).getTime()
+        : Number.MAX_SAFE_INTEGER;
       result = result.filter((wo) => {
         const woStart = this.calculator.parseLocalDate(wo.data.startDate).getTime();
         const woEnd = this.calculator.parseLocalDate(wo.data.endDate).getTime();

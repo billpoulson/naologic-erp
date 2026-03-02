@@ -35,7 +35,8 @@ test.describe('Create and Edit', () => {
     await menuBtn.waitFor({ state: 'visible', timeout: 5000 });
     await page.screenshot({ path: 'test-results/screenshots/bar-hover-menu.png' });
     await menuBtn.click({ force: true });
-    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible({ timeout: 3000 });
+    // Dropdown positions via setTimeout(0); wait for it to render
+    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible({ timeout: 5000 });
     await page.screenshot({ path: 'test-results/screenshots/bar-dropdown-open.png' });
     await page.getByRole('menuitem', { name: 'Edit' }).click();
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
@@ -69,8 +70,9 @@ test.describe('Create and Edit', () => {
     const bar = firstRowWithBar.locator('.work-order-bar').first();
     await bar.scrollIntoViewIfNeeded();
     await bar.hover();
+    await bar.locator('.bar-menu-btn').waitFor({ state: 'visible', timeout: 5000 });
     await bar.locator('.bar-menu-btn').click({ force: true });
-    await page.getByRole('menuitem', { name: 'Edit' }).click();
+    await page.getByRole('menuitem', { name: 'Edit' }).click({ timeout: 5000 });
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
 
     const nameInput = page.getByPlaceholder('Acme Inc.');
@@ -92,11 +94,13 @@ test.describe('Create and Edit', () => {
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('To Be Deleted')).toHaveCount(1, { timeout: 15000 });
 
+    // Wait for bar to be in DOM (first row is visible by default)
     const bar = page.locator('.work-order-bar').filter({ hasText: 'To Be Deleted' });
-    await bar.scrollIntoViewIfNeeded();
+    await bar.waitFor({ state: 'visible', timeout: 5000 });
     await bar.hover();
+    await bar.locator('.bar-menu-btn').waitFor({ state: 'visible', timeout: 3000 });
     await bar.locator('.bar-menu-btn').click({ force: true });
-    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click({ timeout: 5000 });
 
     await expect(page.getByText('To Be Deleted')).toHaveCount(0);
   });

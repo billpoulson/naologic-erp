@@ -65,11 +65,11 @@ test.describe('User Documentation', () => {
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '08-bar-hover-menu.png') });
 
     await bar.locator('.bar-menu-btn').click({ force: true });
-    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible({ timeout: 5000 });
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '09-bar-dropdown-edit-delete.png') });
 
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('menuitem', { name: 'Edit' }).click();
     await expect(page.getByRole('heading', { name: 'Work Order Details' })).toBeVisible();
 
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, '10-edit-panel-open.png') });

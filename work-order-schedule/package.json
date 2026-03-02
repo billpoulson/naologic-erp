@@ -10,7 +10,8 @@
     "test": "ng test --no-watch --browsers=ChromeHeadless",
     "test:watch": "ng test",
     "e2e": "playwright test",
-    "e2e:docs": "playwright test --grep \"User Documentation\""
+    "e2e:docs": "playwright test --grep \"User Documentation\"",
+    "e2e:a11y": "playwright test e2e/accessibility.spec.ts"
   },
   "prettier": {
     "printWidth": 100,
@@ -45,6 +46,7 @@
     "@angular/cli": "^20.3.18",
     "@angular/compiler-cli": "^20.3.0",
     "@angular/localize": "^20.3.0",
+    "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2",
     "@types/jasmine": "~5.1.0",
     "jasmine-core": "~5.9.0",

@@ -54,6 +54,16 @@ npm run e2e:docs
 
 This produces `docs/USER-GUIDE.md` and `docs/screenshots/` with workflow screenshots.
 
+### Accessibility (WCAG)
+
+Run axe-core accessibility checks:
+
+```bash
+npm run e2e:a11y
+```
+
+See `docs/WCAG-ANALYSIS.md` for the full WCAG 2.1 compliance analysis.
+
 ## Sample data
 
 Work centers and work orders are loaded from `public/data/`:

@@ -203,4 +203,5 @@ Naologic’s video transcript emphasizes:
 - **transcript.txt** — Video transcript with implementation pointers
 - **docs/adr/** — Architecture decision records
 - **docs/TODO.md** — Future upgrades (e.g., Angular 21)
+- **docs/WCAG-ANALYSIS.md** — WCAG 2.1 accessibility analysis and compliance status
 

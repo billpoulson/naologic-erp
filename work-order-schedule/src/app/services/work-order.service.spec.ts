@@ -80,7 +80,7 @@ describe('WorkOrderService', () => {
     flushInitialData();
     service.workOrders.pipe(take(1)).subscribe((orders) => {
       const initialCount = orders.length;
-      service.createWorkOrder({
+      const created = service.createWorkOrder({
         name: 'Test Order',
         workCenterId: 'wc-1',
         status: 'open',
@@ -90,6 +90,15 @@ describe('WorkOrderService', () => {
       const newOrders = service.getWorkOrders();
       expect(newOrders.length).toBe(initialCount + 1);
       expect(newOrders[newOrders.length - 1].data.name).toBe('Test Order');
+      expect(created.docType).toBe('workOrder');
+      expect(created.docId).toMatch(/^wo-\d+$/);
+      expect(created.data).toEqual({
+        name: 'Test Order',
+        workCenterId: 'wc-1',
+        status: 'open',
+        startDate: '2025-06-15',
+        endDate: '2025-06-22',
+      });
       done();
     });
   });
@@ -110,7 +119,7 @@ describe('WorkOrderService', () => {
     httpMock.expectOne('data/work-centers.json').flush(MOCK_CENTERS);
     httpMock.expectOne('data/work-orders.json').flush([]);
     service.workOrders.pipe(take(1)).subscribe(() => {
-      service.createWorkOrder({
+      const created = service.createWorkOrder({
         name: 'Order 2',
         workCenterId: 'wc-1',
         status: 'open',
@@ -127,6 +136,15 @@ describe('WorkOrderService', () => {
       // Same-day handoff: new order starts the day existing order ends — allowed
       const sameDayHandoff = service.checkOverlap('wc-1', '2025-06-10', '2025-06-20');
       expect(sameDayHandoff).toBe(false);
+
+      // Edit scenario: same date range as existing order, exclude that order — no overlap
+      const editSameDates = service.checkOverlap(
+        'wc-1',
+        '2025-06-01',
+        '2025-06-10',
+        created.docId
+      );
+      expect(editSameDates).toBe(false);
       done();
     });
   });
@@ -168,6 +186,22 @@ describe('WorkOrderService', () => {
       expect(updated).toBeTruthy();
       expect(updated.data.name).toBe('Updated Name');
       expect(updated.data.status).toBe('complete');
+      done();
+    });
+  });
+
+  it('should update work order with partial data', (done) => {
+    flushInitialData();
+    service.workOrders.pipe(take(1)).subscribe((orders) => {
+      const docId = orders[0].docId;
+      const original = orders[0];
+      service.updateWorkOrder(docId, { name: 'Only Name Changed' });
+      const updated = service.getWorkOrders().find((o) => o.docId === docId)!;
+      expect(updated.data.name).toBe('Only Name Changed');
+      expect(updated.data.workCenterId).toBe(original.data.workCenterId);
+      expect(updated.data.status).toBe(original.data.status);
+      expect(updated.data.startDate).toBe(original.data.startDate);
+      expect(updated.data.endDate).toBe(original.data.endDate);
       done();
     });
   });
